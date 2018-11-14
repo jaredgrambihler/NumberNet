@@ -15,36 +15,55 @@ class Network():
         #return label
         pass
 
-    def train(self, miniBatch):
-        #train network on minibatch of data
-        #update weights
-        #call for data to be output
+    def backwardPass(self):
+        #backprop through the network
+        #doesn't have to return anything because
+        #the weight Layer object saves it!
         pass
 
+    def trainBatch(self, miniBatch):
+        #train network on minibatch of data
+        #forward/backprop through each single image
+        #save all weight gradients
+        #avg all gradients of the minibatch
+        #update weights
+        pass
+    
     def accuracy(self, testData):
-        #run network pass on test data
+        #run network forwardpass on test data
+        #compute % accuracy
         pass
 
     def outputData(self):
         #output loss
         #output accuracy
         #output weights
-        #output train time
+        pass
+
+    def train(self, data):
+        #trains data using minibatches
+        #samples each minibatch
+        #calls the trainBatch on it
+        #outputs training time after each minibatch
+        outputData()
         pass
 
 
-def importData():
-    #imports dataset
-    #might need to make an object to handle the data
+def importData(dataSet):
+    #imports dataset specified (test/train)
+    #returns to main
     pass
 
 
 def main():
     #init network
-    #import data
-    #train network w/ minibatches
+    numberNet = Network()
+    trainData = importData('Train')
+    testData = importData('Test') #import data
+    initialAccuracy = numberNet.accuracy(testData) #test initial accuracy
+    numberNet.train(trainData) #train network
     #save weights!
-    #test final accuracy
+    finalAccuracy = numberNet.accuracy(testData) #test final accuracy
     #display output data
     pass
 
