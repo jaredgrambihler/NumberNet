@@ -96,9 +96,9 @@ class Multiplication(Layer):
     
     #stores inputs and returns the dot product
     def forwardPass(self, input1, input2):
-        self.input1 = input1
+        self.input1 = input1.weights
         self.input2 = input2
-        return input1.dot(input2)
+        return self.input1.dot(self.input2)
 
     #returns grad of input1 and input2
     def backwardPass(self, priorGradient):
