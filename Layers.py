@@ -31,8 +31,8 @@ class Layer:
 class Weights:
 
     #random init of weights for x,y dimensions
-    def __init__(x,y):
-        self.weights = np.random.random((x,y))
+    def __init__(x, y):
+        self.weights = np.random.random((x, y))
 
     #backwardPass for gradients on weights
     def backwardPass(self, priorGradient):
