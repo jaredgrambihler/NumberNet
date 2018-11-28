@@ -27,19 +27,20 @@ class Layer:
         backwardPass(gradient)
 
 
-#unique layer to be used for weights.
-class Weights(Layer):
+#class for weights
+class Weights:
 
-    #saves weights to be part of the layer
-    def forwardPass(self, weights):
-        self.weights = weights
-        return weights
+    #random init of weights for x,y dimensions
+    def __init__(x,y):
+        self.weights = np.random.random((x,y))
 
-    #updates weights, passed back gradient
-    def backwardPass(self, priorGradient, stepSize):
-        self.weights -= priorGradient * stepSize
-        #code for log of weights over time
-        return priorGradient
+    #backwardPass for gradients on weights
+    def backwardPass(self, priorGradient):
+        pass
+
+    #updates the weight gradient based on avg of minibatch
+    def updateGrad(self, stepSize, avgGrad):
+        self.weights -= avgGrad *stepSize
 
 
 #unique last layer to be used to handle the loss.
@@ -48,7 +49,7 @@ class Loss(Layer):
     #doesn't need to pass forward.
     def forwardPass(self, input1):
         self.loss = input1
-        #output data
+        #outputs data
 
     #gradient of the loss w/ respect to itself is always 1.
     def backwardPass(self):
@@ -196,7 +197,7 @@ class SoftMax(Layer):
 
     #returns loss of softmax function (only one element is used since label is one element)
     def backwardPass(self, priorGradient):
-        grad = priorGradient * 1/self.normalizedValue
+        grad = priorGradient * -1/self.normalizedValue
         grad /= self.sum
         grad *= self.expValue[self.labelIndex]
         returnGrad = np.zeros(self.expValue.shape) #makes a zeros array for return
