@@ -7,7 +7,7 @@ class Network():
 
     def __init__(self, stepSize = .01):
         #init weights
-        self.w1 = ly.Weights(784, 784)
+        self.w1 = ly.Weights(784)
         #init network
         self.l1 = ly.Multiplication()
         self.loss = ly.Softmax()
