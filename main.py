@@ -7,7 +7,9 @@ class Network():
 
     def __init__(self, stepSize = .01):
         #init weights
-        self.w1 = ly.Weights(784)
+        x = 784
+        y = 10 
+        self.w1 = ly.Weights(x, y)
         #init network
         self.l1 = ly.Multiplication()
         self.loss = ly.Softmax()
@@ -30,7 +32,7 @@ class Network():
     def trainBatch(self, miniBatchImages, miniBatchLabels):
         #train network on minibatch of data
         #forward/backprop through each single image
-        dW = np.zeros(784, 784) #same size as weights
+        dW = np.zeros(784, 10) #same size as weights
         numData = len(miniBatchImages) #stores number of images being tested
         for i in range(numData): #runs through the entire miniBatch
             self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
@@ -44,7 +46,7 @@ class Network():
     def accuracy(self, testImages, testLabels):
         accuracy = 0.0 #accuracy starts at 0, adds 1 for each correctly identified image, then takes a %
         for i in range(len(testImages)): #checks accuracy for all test data
-            forwardPass(testImages[i], testLabels[i])
+            self.forwardPass(testImages[i], testLabels[i])
             largestValue = 0 #index of largest value
             for j in range(1, len(self.h1)): #finds the index of the largest score
                 if (self.h1[j] > self.h1[largestValue]):
