@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Layer:
     
@@ -31,8 +32,8 @@ class Layer:
 class Weights:
 
     #random init of weights for x,y dimensions
-    def __init__(x, y):
-        self.weights = np.random.random((x, y))
+    def __init__(self, x, y):
+        self.weights = np.random.randn(x, y) * 10e-3
 
     #backwardPass for gradients on weights
     def backwardPass(self, priorGradient):
@@ -40,8 +41,9 @@ class Weights:
 
     #updates the weight gradient based on avg of minibatch
     def updateGrad(self, stepSize, avgGrad):
-        self.weights -= avgGrad *stepSize
-
+        self.weights -= avgGrad * stepSize
+        weightSum = sum(sum(abs(self.weights))) #takes sum of abs of weight
+        self.weights = self.weights / (weightSum * 78400) #prevents weights from exploding, should be fixed later
 
 #unique last layer to be used to handle the loss.
 class Loss(Layer):
@@ -100,14 +102,21 @@ class Multiplication(Layer):
         self.input2 = input2
         return self.input1.dot(self.input2)
 
+
     #returns grad of input1 and input2
     def backwardPass(self, priorGradient):
-        #scale vector for each row that would have been involved in dot product.
-        #It is important that input1 is the larger vector and input2 is 1D!'
-        returnArray = np.vstack((self.input1[0,:], self.input1[1,:]))
-        for i in range(self.input1.shape[0]-2):
-            returnArray = np.vstack((returnArray, self.input1[i+2,:]))
-        return returnArray * priorGradient, self.input1.dot(priorGradient)
+        #scale vector for each row based on the dot product effect it had.
+        #It is important that input2 is 1D.
+##        returnArray = np.vstack((self.input1[0,:], self.input1[1,:]))
+##        for i in range(self.input1.shape[0]-2):
+##            returnArray = np.vstack((returnArray, self.input1[i+2,:])) 
+##        return returnArray , 0
+        weightGrad = np.zeros(self.input1.shape) #creates an array for the gradients that is the same shape as the weights
+        for i in range(len(priorGradient)): #for the number of previous gradients
+            for j in range(len(self.input2)):
+                weightGrad[i][j] = priorGradient[i] * self.input2[j]
+        return weightGrad, 0 #the 0 is for the other array, not needed currently
+
 
 
 #1/x division
@@ -184,22 +193,22 @@ class ReLU(Layer):
         return multgrad * priorGradient #all values are preserves *1 or forced to 0
 
 
-class SoftMax(Layer):
+class Softmax(Layer):
 
     #computes and returns a softmax loss
     def forwardPass(self, input1, labelIndex):
         self.labelIndex = labelIndex #saves index for backwardPass
         self.expValue = np.exp(input1) #exponentiates
         self.sum = np.sum(self.expValue) #takes sum
-        self.normalizedValue = self.expValue[labelIndex] / sum #saves compute by skipping to label index
-        self.loss = -log(self.normalizedValue)
+        self.normalizedValue = self.expValue[labelIndex] / self.sum #saves compute by skipping to label index
+        self.loss = -math.log(self.normalizedValue)
         return self.loss
-
+    
     #returns loss of softmax function (only one element is used since label is one element)
-    def backwardPass(self, priorGradient):
+    def backwardPass(self, priorGradient = 1.00):
         grad = priorGradient * -1/self.normalizedValue
         grad /= self.sum
         grad *= self.expValue[self.labelIndex]
         returnGrad = np.zeros(self.expValue.shape) #makes a zeros array for return
-        returnGrad[labelIndex] = grad #set the value of the gradient
+        returnGrad[self.labelIndex] = grad #set the value of the gradient
         return returnGrad

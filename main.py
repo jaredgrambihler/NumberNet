@@ -1,15 +1,14 @@
 import Layers as ly
 import numpy as np
 from mnist import MNIST
+import time
 
 #class to create the network and store it in memory
 class Network():
 
-    def __init__(self, stepSize = .01):
+    def __init__(self, stepSize = 10e-5):
         #init weights
-        x = 784
-        y = 10 
-        self.w1 = ly.Weights(x, y)
+        self.w1 = ly.Weights(10, 784)
         #init network
         self.l1 = ly.Multiplication()
         self.loss = ly.Softmax()
@@ -32,7 +31,7 @@ class Network():
     def trainBatch(self, miniBatchImages, miniBatchLabels):
         #train network on minibatch of data
         #forward/backprop through each single image
-        dW = np.zeros(784, 10) #same size as weights
+        dW = np.zeros((10, 784)) #same size as weights
         numData = len(miniBatchImages) #stores number of images being tested
         for i in range(numData): #runs through the entire miniBatch
             self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
@@ -66,11 +65,11 @@ class Network():
 
     def train(self, trainImages, trainLabels, batchSize = 25):
         #trains data using minibatches
-        for i in range(len(trainImages)/batchSize):
+        for i in range(int(len(trainImages)/batchSize)):
             miniBatchImages = trainImages[i:i+batchSize] #slices train data
             miniBatchLabels = trainLabels[i:i+batchSize]
-            trainBatch(miniBatchImages, miniBatchLabels)
-            outputData() #some output data
+            self.trainBatch(miniBatchImages, miniBatchLabels)
+            self.outputData() #some output data
 
 
 #uses the python-mnist module to import the data
@@ -85,12 +84,15 @@ def main():
     numberNet = Network() #init network
     trainImages, trainLabels, testImages, testLabels = importData() #imports data
     initialAccuracy = numberNet.accuracy(testImages, testLabels) #test initial accuracy
+    startTime = time.perf_counter()
     numberNet.train(trainImages, trainLabels) #train network
+    endTime = time.perf_counter()
     #pickle weights for re-use.
-    finalAccuracy = numberNet.accuracy(testData) #test final accuracy
+    finalAccuracy = numberNet.accuracy(testImages, testLabels) #test final accuracy
     #display output data
 
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
+    print('Train time: ' , endTime - startTime)
 
 main()
