@@ -37,30 +37,28 @@ class Network():
         grad2 = self.l1.backwardPass(grad1)
         return grad2
 
+    
+    #tests the accuracy of single image, forward prop through network.
+    #returns a 0.0 or a 1.0 for accuracy.
+    #HAS NOT BEEN TESTED
+    def accuracy(self, image, label):
+        self.forwardPass(image, label)
+        largestValue = 0 #index of largest value
+        #finds the index of the largest score
+        for j in range(1, len(self.h1)):
+            #if there is a new larger value, updates index
+            if (self.h1[j] > self.h1[largestValue]):
+                largestValue = j
+        if (largestValue == label):
+            return 1
+        else:
+            return 0
+        
 
-    #trains the network on a minibatch of data.
-    #updates the gradient after find the avg gradient for the
-    #entire minibatch.
-    def trainBatch(self, miniBatchImages, miniBatchLabels):
-        #initializes return array the same size as weights
-        dW = np.zeros(self.w1.weights.shape)
-         #stores number of images being tested
-        numData = len(miniBatchImages)
-        #runs through the miniBatch
-        for i in range(numData):
-            #forwards a single image and label through the network.
-            self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
-            #backprops and adds to weights
-            dW += self.backwardPass()
-        #avg all gradients of the minibatch
-        dW = dW / numData
-        #update weights
-        self.w1.updateGrad(self.stepSize, dW)
-
-
+    #SHOULD BE UPDATED TO WORK WITH ACCURACY
     #defines the accuracy of the network on the test data (10k images/labels)
     #returns the accuracy as a decimal value (1.0 is 100%)
-    def accuracy(self, testImages, testLabels):
+    def accuracyTest(self, testImages, testLabels):
         #accuracy starts at 0, adds 1 for each correctly identified image
         accuracy = 0.0
         #loops through all test data
@@ -80,11 +78,54 @@ class Network():
         return accuracy / len(testImages)
 
 
-    #to be coded
+    #trains the network on a minibatch of data.
+    #updates the gradient after find the avg gradient for the
+    #entire minibatch.
+    def trainBatch(self, miniBatchImages, miniBatchLabels):
+        #initializes return array the same size as weights
+        dW = np.zeros(self.w1.weights.shape)
+        #stores number of images being tested
+        numData = len(miniBatchImages)
+        #tracks accuracy, starts at 0
+        accuracy = 0.0
+        #tracks loss
+        loss = 0.0
+        #runs through the miniBatch
+        for i in range(numData):
+            #forwards a single image and label through the network.
+            # should be done by accuarcy #self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
+            accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
+            #updates loss
+            loss += self.loss.loss
+            #backprops and adds to weights
+            dW += self.backwardPass()
+        #avg all gradients of the minibatch
+        dW = dW / numData
+        #update weights
+        self.w1.updateGrad(self.stepSize, dW)
+        #outputs data after training the minibatch
+        #output loss
+        loss /= numData
+        print('Loss: ', loss)
+        #output accuracy
+        #avg accuracy over miniBatch
+        accuracy /= numData
+        print('Accuracy: ' , accuracy)
+        #output weights
+        weights = self.w1.weights
+        print('Weights: ' , weights)
+        #ouput changes to weights
+        print('dW: ' , dW)
+
+
+    #ouputs data after a minibatch has trained
     def outputData(self):
         #output loss
+        ##loss over minibatch
         #output accuracy
+        ##accuracy for the minibatch
         #output weights
+        ##weights = self.w1.weights
         pass
 
 
@@ -97,7 +138,11 @@ class Network():
         numMinibatches = int(len(trainImages)/batchSize)
         #creates an index to use for slicing
         dataIndex = 0
+        #times the network train time
+        startTime = time.perf_counter()
         for i in range(int(len(trainImages)/batchSize)):
+            #miniBatch time tracker
+            miniBatchStartTime = time.perf_counter()
             #slices train images and labels
             miniBatchImages = trainImages[dataIndex:dataIndex+batchSize]
             miniBatchLabels = trainLabels[dataIndex:dataIndex+batchSize]
@@ -105,8 +150,15 @@ class Network():
             dataIndex += batchSize
             #trains the minibatch
             self.trainBatch(miniBatchImages, miniBatchLabels)
-            #outputs data for analysis
-            self.outputData()
+            #miniBatch time tracker
+            miniBatchEndTime = time.perf_counter()
+            #ouputs miniBatch time
+            print(miniBatchEndTime - miniBatchStartTime)
+        #times the network train time
+        endTime = time.perf_counter()
+        #outputs the train time
+        print('Train time: ' , endTime - startTime)
+
 
 
 #uses the python-mnist module to import the data
@@ -129,21 +181,16 @@ def main():
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
     #test initial accuracy
-    initialAccuracy = numberNet.accuracy(testImages, testLabels)
-    #tracks time to train the data. Later to be added to outputData method instead
-    startTime = time.perf_counter()
+    initialAccuracy = numberNet.accuracyTest(testImages, testLabels)
     #trains the network
     numberNet.train(trainImages, trainLabels)
-    #tracks end time for training
-    endTime = time.perf_counter()
     #pickle weights for re-use.
     ##to be implemeneted
     #tests final accuracy
-    finalAccuracy = numberNet.accuracy(testImages, testLabels)
+    finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
     #display output data
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
-    print('Train time: ' , endTime - startTime)
 
 
 main()
