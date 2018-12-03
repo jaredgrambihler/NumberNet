@@ -3,6 +3,8 @@ import numpy as np
 from mnist import MNIST
 import time
 import pickle
+import matplotlib.pyplot as plt
+
 
 
 #class to create the network and store it in memory. Can be pickled to avoid retraining the network.
@@ -198,6 +200,26 @@ def importData(dir = './mnist'):
     return trainImages, trainLabels, testImages, testLabels
 
 
+#displays the data that was logged during training
+#totally broken
+def displayData():
+    accuracy = open('accuracy.txt', 'rb')
+    dW = open('dW.txt', 'rb')
+    loss = open('loss.txt', 'rb')
+    #weights = open('weights.txt', 'rb')
+
+    accuracyList = pickle.load(accuracy)
+    lossList = pickle.load(loss)
+    #weightsList = pickle.load(weights)
+    #dWList = pickle.load(dW)
+    y = [x for x in range(len(accuracyList))]
+    plt.plot(y, accuracy)
+    plt.show()
+
+#runs network and displays labels and images 
+def runNetwork():
+    pass
+
 
 def main():
      #init network
@@ -217,4 +239,4 @@ def main():
     print('finalAccuracy: ', finalAccuracy)
 
 
-main()
+displayData()
