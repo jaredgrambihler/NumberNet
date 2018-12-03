@@ -2,6 +2,7 @@ import Layers as ly
 import numpy as np
 from mnist import MNIST
 import time
+import pickle
 
 
 #class to create the network and store it in memory. Can be pickled to avoid retraining the network.
@@ -11,7 +12,7 @@ class Network():
     #the layers that are stored must be written here, although
     #the interactions b/w layers are in the forward and backward pass
     #methods.
-    def __init__(self, stepSize = 10e-5):
+    def __init__(self, stepSize = 10e-3):
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
         #init network layers
@@ -19,7 +20,7 @@ class Network():
         self.l1 = ly.Multiplication()
         self.loss = ly.Softmax()
         self.stepSize = stepSize
-
+        
 
     #forwards an image throught the network and outputs the loss.
     #saves the score outputs to the class.
@@ -106,15 +107,19 @@ class Network():
         #outputs data after training the minibatch
         #output loss
         loss /= numData
+        self.lossList.append(loss)
         print('Loss: ', loss)
         #output accuracy
         #avg accuracy over miniBatch
         accuracy /= numData
+        self.accuracyList.append(accuracy)
         print('Accuracy: ' , accuracy)
         #output weights
         weights = self.w1.weights
+        self.weightsList.append(weights)
         print('Weights: ' , weights)
         #ouput changes to weights
+        self.dWList.append(dW)
         print('dW: ' , dW)
 
 
@@ -140,6 +145,13 @@ class Network():
         dataIndex = 0
         #times the network train time
         startTime = time.perf_counter()
+
+        #creates output lists
+        self.lossList = []
+        self.accuracyList = []
+        self.weightsList = []
+        self.dWList = []
+        
         for i in range(int(len(trainImages)/batchSize)):
             #miniBatch time tracker
             miniBatchStartTime = time.perf_counter()
@@ -154,6 +166,18 @@ class Network():
             miniBatchEndTime = time.perf_counter()
             #ouputs miniBatch time
             print(miniBatchEndTime - miniBatchStartTime)
+
+        #outputs data into files
+        lossFile = open('loss.txt', 'wb')
+        accuracyFile = open('accuracy.txt', 'wb')
+        weightsFile = open('weights.txt', 'wb')
+        dWFile = open('dW.txt', 'wb')
+
+        pickle.dump(self.lossList, lossFile)
+        pickle.dump(self.accuracyList, accuracyFile)
+        pickle.dump(self.weightsList, weightsFile)
+        pickle.dump(self.dWList, dWFile)
+        
         #times the network train time
         endTime = time.perf_counter()
         #outputs the train time
