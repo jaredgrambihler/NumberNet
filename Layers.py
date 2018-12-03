@@ -54,7 +54,7 @@ class Weights:
         #takes sum using abs values
         weightSum = sum(sum(abs(self.weights)))
         #prevents weights from exploding using the sum, should be fixed later
-        self.weights = self.weights / (weightSum * 78400)
+        self.weights = self.weights / (weightSum * 784000)
 
 
 
@@ -66,7 +66,7 @@ class Loss(Layer):
     #doesn't need to pass forward.
     def forwardPass(self, input1):
         self.loss = input1
-        #outputs data
+        #outputs data?
 
 
     #gradient of the loss w/ respect to itself is always 1.
@@ -246,39 +246,70 @@ class ReLU(Layer):
 
 
 
-#computes the Softmax loss
-class Softmax(Layer):
+##computes the Softmax loss
+#class Softmax(Layer):
 
-    #computes and returns a softmax loss
-    def forwardPass(self, input1, labelIndex):
-        #saves index for backwardPass
-        self.labelIndex = labelIndex
-        #exponentiates, can easily overflow (exploding gradients)
-        self.expValue = np.exp(input1)
-        #takes sum to normalize
-        self.sum = np.sum(self.expValue)
-        #saves compute by skipping to label index, ignores values that will go to 0
-        #this might have to be changed to preserve backwards gradient flow
-        self.normalizedValue = self.expValue[labelIndex] / self.sum
-        #computes loss as -log of the normalized values for the label score
-        self.loss = -math.log(self.normalizedValue)
-        return self.loss
+#    #computes and returns a softmax loss
+#    def forwardPass(self, input1, labelIndex):
+#        #saves index for backwardPass
+#        self.labelIndex = labelIndex
+#        #exponentiates, can easily overflow (exploding gradients)
+#        self.expValue = np.exp(input1)
+#        #takes sum to normalize
+#        self.sum = np.sum(self.expValue)
+#        #saves compute by skipping to label index, ignores values that will go to 0
+#        #this might have to be changed to preserve backwards gradient flow
+#        self.normalizedValue = self.expValue[labelIndex] / self.sum
+#        #computes loss as -log of the normalized values for the label score
+#        self.loss = -math.log(self.normalizedValue)
+#        return self.loss
     
 
-    #returns loss of softmax function (only one element is used since label is one element)
-    #priorGradeint is 1.00 by default (dL/dL should always be 1.00), but can be modified
-    #if needed.
+#    #returns loss of softmax function (only one element is used since label is one element)
+#    #priorGradeint is 1.00 by default (dL/dL should always be 1.00), but can be modified
+#    #if needed.
+#    def backwardPass(self, priorGradient = 1.00):
+#        #finds gradient for the ln(x) portion
+#        grad = priorGradient * -1/self.normalizedValue
+#        #updates gradient to scale based on the sum
+#        grad /= self.sum
+#        #updates grad for e^x
+#        grad *= self.expValue[self.labelIndex]
+#         #makes a zeros array for return
+#         #MAY BE PROBLEMATIC
+#        returnGrad = np.zeros(self.expValue.shape)
+#        #set the value of the gradient for the single gradient
+#        #once again, may be problematic
+#        returnGrad[self.labelIndex] = grad
+#        return returnGrad
+
+
+#new attempt at Softmax
+#incomplete
+class Softmax(Layer):
+
+    def forwardPass(self, input1, labelIndex):
+        #saves label index
+        self.labelIndex = labelIndex
+        #exponentiates, can easily explode here
+        self.expValue = np.exp(input1)
+        #sums for division, does 1/sum so it can be a scalar in the following layer
+        self.sum = 1/np.sum(self.expValue)
+        #combines label value w/ sum
+        self.classScore = self.expValue[labelIndex] * self.sum
+        #takes -ln of score.
+        #as the score approaches 1 (perfect score), loss will approach 0
+        self.loss = -math.log(self.classScore)
+
+
     def backwardPass(self, priorGradient = 1.00):
-        #finds gradient for the ln(x) portion
-        grad = priorGradient * -1/self.normalizedValue
-        #updates gradient to scale based on the sum
-        grad /= self.sum
-        #updates grad for e^x
-        grad *= self.expValue[self.labelIndex]
-         #makes a zeros array for return
-         #MAY BE PROBLEMATIC
-        returnGrad = np.zeros(self.expValue.shape)
-        #set the value of the gradient for the single gradient
-        #once again, may be problematic
-        returnGrad[self.labelIndex] = grad
+        grad = priorGradient * -1/self.classScore
+        dSum = grad * self.expValue[self.labelIndex]
+        dLabelIndex = grad * self.sum
+        returnGrad = np.ones(self.expValue.shape)
+        for i in range(len(returnGrad)):
+            returnGrad[i] = dSum * -self.sum**-2
+        #adds gradients
+        returnGrad[self.labelIndex] += dLabelIndex
+        returnGrad *= self.expValue
         return returnGrad
