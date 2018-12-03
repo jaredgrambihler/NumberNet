@@ -213,7 +213,7 @@ def displayData():
     #weightsList = pickle.load(weights)
     #dWList = pickle.load(dW)
     y = [x for x in range(len(accuracyList))]
-    plt.plot(y, accuracy)
+    plt.plot(accuracyList)
     plt.show()
 
 #runs network and displays labels and images 
