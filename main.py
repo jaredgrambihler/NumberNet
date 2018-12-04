@@ -138,7 +138,7 @@ class Network():
 
     #trains the network. Takes in train data and optional batch size.
     #outputs data on the network each minibatch.
-    def train(self, trainImages, trainLabels, batchSize = 25):
+    def train(self, trainImages, trainLabels, batchSize = 250):
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered.
@@ -216,22 +216,22 @@ def displayData():
     #averages accuracy data down to n = 100 points
     avgAccuracy = []
     avgLoss =[]
-    dataPoints = 100
-    for x in range(int(len(accuracyList) / dataPoints)):
-        avgA = 0
-        avgL = 0
-        for j in range(100):
-            avgA += accuracyList[x*dataPoints + j]
-            avgL += lossList[x*dataPoints + j]
-        #appends average to the average accuracy
-        avgAccuracy.append(avgA / (len(accuracyList) / dataPoints))
-        avgLoss.append(avgL / (len(lossList) / dataPoints))
+##    dataPoints = 100
+##    for x in range(int(len(accuracyList) / dataPoints)):
+##        avgA = 0
+##        avgL = 0
+##        for j in range(100):
+##            avgA += accuracyList[x*dataPoints + j]
+##            avgL += lossList[x*dataPoints + j]
+##        #appends average to the average accuracy
+##        avgAccuracy.append(avgA / (len(accuracyList) / dataPoints))
+##        avgLoss.append(avgL / (len(lossList) / dataPoints))
 
     fig, (lossPlot, accuracyPlot, weightHist0, weightHist1) = plt.subplots(1,4)
 
-    lossPlot.plot(avgLoss)
+    lossPlot.plot(lossList)
 
-    accuracyPlot.plot(avgAccuracy)
+    accuracyPlot.plot(accuracyList)
 
     #n, bins, patches = weightHist.hist(weightsList[0], 10, density = 1)
     #this code shows a histogram
@@ -271,5 +271,5 @@ def main():
     print('finalAccuracy: ', finalAccuracy)
 
 
-main()
+#main()
 displayData()
