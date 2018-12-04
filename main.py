@@ -206,15 +206,47 @@ def displayData():
     accuracy = open('accuracy.txt', 'rb')
     dW = open('dW.txt', 'rb')
     loss = open('loss.txt', 'rb')
-    #weights = open('weights.txt', 'rb')
+    weights = open('weights.txt', 'rb')
 
     accuracyList = pickle.load(accuracy)
     lossList = pickle.load(loss)
-    #weightsList = pickle.load(weights)
-    #dWList = pickle.load(dW)
-    y = [x for x in range(len(accuracyList))]
-    plt.plot(accuracyList)
+    weightsList = pickle.load(weights)
+    dWList = pickle.load(dW)
+
+    #averages accuracy data down to n = 100 points
+    avgAccuracy = []
+    avgLoss =[]
+    dataPoints = 100
+    for x in range(int(len(accuracyList) / dataPoints)):
+        avgA = 0
+        avgL = 0
+        for j in range(100):
+            avgA += accuracyList[x*dataPoints + j]
+            avgL += lossList[x*dataPoints + j]
+        #appends average to the average accuracy
+        avgAccuracy.append(avgA / (len(accuracyList) / dataPoints))
+        avgLoss.append(avgL / (len(lossList) / dataPoints))
+
+    fig, (lossPlot, accuracyPlot, weightHist0, weightHist1) = plt.subplots(1,4)
+
+    lossPlot.plot(avgLoss)
+
+    accuracyPlot.plot(avgAccuracy)
+
+    #n, bins, patches = weightHist.hist(weightsList[0], 10, density = 1)
+    #this code shows a histogram
+    #plt.hist(data, bins = numBins)
+    #plt.show()
+
+    weights0 = weightsList[0].reshape(7840)
+    weightHist0.hist(weights0, bins = 20)
+
+    weights1 = weightsList[len(weightsList) -1].reshape(7840)
+    weightHist1.hist(weights1, bins = 20)
+
+    plt.plot(avgAccuracy)
     plt.show()
+
 
 #runs network and displays labels and images 
 def runNetwork():
@@ -239,4 +271,5 @@ def main():
     print('finalAccuracy: ', finalAccuracy)
 
 
+main()
 displayData()

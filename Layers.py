@@ -39,7 +39,8 @@ class Weights:
     #takes an optional distribution size for determining
     #the spread of the normal distribution
     def __init__(self, x, y, distribution = .01):
-        self.weights = np.random.randn(x, y) * distribution
+        self.weights = np.random.normal(0, distribution, x*y)
+        self.weights = np.reshape(self.weights, (x,y))
 
 
     #backwardPass for gradients on weights
