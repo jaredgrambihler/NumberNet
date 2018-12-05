@@ -3,6 +3,7 @@ import numpy as np
 from mnist import MNIST
 import time
 import pickle
+import math
 import matplotlib.pyplot as plt
 
 
@@ -57,7 +58,7 @@ class Network():
         else:
             return 0
         
-
+    
     #SHOULD BE UPDATED TO WORK WITH ACCURACY
     #defines the accuracy of the network on the test data (10k images/labels)
     #returns the accuracy as a decimal value (1.0 is 100%)
@@ -108,37 +109,38 @@ class Network():
         self.w1.updateGrad(self.stepSize, dW)
         #outputs data after training the minibatch
         #output loss
-        loss /= numData
+        loss = loss / numData
         self.lossList.append(loss)
         print('Loss: ', loss)
         #output accuracy
         #avg accuracy over miniBatch
-        accuracy /= numData
+        accuracy = accuracy / numData
         self.accuracyList.append(accuracy)
         print('Accuracy: ' , accuracy)
         #output weights
         weights = self.w1.weights
         self.weightsList.append(weights)
         print('Weights: ' , weights)
-        #ouput changes to weights
-        self.dWList.append(dW)
-        print('dW: ' , dW)
 
 
     #ouputs data after a minibatch has trained
-    def outputData(self):
+    def outputData(self, loss, accuracy):
         #output loss
-        ##loss over minibatch
+        self.lossList.append(loss)
+        print('Loss: ', loss)
         #output accuracy
-        ##accuracy for the minibatch
+        #avg accuracy over miniBatch
+        self.accuracyList.append(accuracy)
+        print('Accuracy: ' , accuracy)
         #output weights
-        ##weights = self.w1.weights
-        pass
+        weights = self.w1.weights
+        self.weightsList.append(weights)
+        print('Weights: ' , weights)
 
-
+      
     #trains the network. Takes in train data and optional batch size.
     #outputs data on the network each minibatch.
-    def train(self, trainImages, trainLabels, batchSize = 250):
+    def train(self, trainImages, trainLabels, batchSize = 500):
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered.
@@ -170,15 +172,13 @@ class Network():
             print(miniBatchEndTime - miniBatchStartTime)
 
         #outputs data into files
-        lossFile = open('loss.txt', 'wb')
-        accuracyFile = open('accuracy.txt', 'wb')
-        weightsFile = open('weights.txt', 'wb')
-        dWFile = open('dW.txt', 'wb')
+        lossFile = open('loss', 'wb')
+        accuracyFile = open('accuracy', 'wb')
+        weightsFile = open('weights', 'wb')
 
         pickle.dump(self.lossList, lossFile)
         pickle.dump(self.accuracyList, accuracyFile)
         pickle.dump(self.weightsList, weightsFile)
-        pickle.dump(self.dWList, dWFile)
         
         #times the network train time
         endTime = time.perf_counter()
@@ -203,15 +203,13 @@ def importData(dir = './mnist'):
 #displays the data that was logged during training
 #totally broken
 def displayData():
-    accuracy = open('accuracy.txt', 'rb')
-    dW = open('dW.txt', 'rb')
-    loss = open('loss.txt', 'rb')
-    weights = open('weights.txt', 'rb')
+    accuracy = open('accuracy', 'rb')
+    loss = open('loss', 'rb')
+    weights = open('weights', 'rb')
 
     accuracyList = pickle.load(accuracy)
     lossList = pickle.load(loss)
     weightsList = pickle.load(weights)
-    dWList = pickle.load(dW)
 
     #averages accuracy data down to n = 100 points
     avgAccuracy = []
@@ -248,13 +246,54 @@ def displayData():
     plt.show()
 
 
+#needs to be updated to show all weights at once
+def visualizeWeights():
+    #load weights
+    weights = open('weights', 'rb')
+    weightsList = pickle.load(weights)
+
+    #makes a list of np arrays for all weights
+    weights = []
+    for i in range(10):
+        weights.append(np.array (weightsList[len(weightsList)-1][i]) )
+        #weights.append(np.array (weightsList[0][i]) )
+
+    #finds max to scale images
+    maxPixel = 0
+    #for each set of weights
+    for weight in weights:
+        #for each element in the weights
+        for element in weight:
+            #finds max value in ALL weights (shows importance among all scores equally)
+            if (abs(element) > maxPixel):
+                maxPixel = abs(element)
+
+    #scales array
+    scalar = 255.0 / maxPixel
+    
+    pixels = np.array(weights[8] * scalar)
+    pixels = np.reshape(pixels, (28,28))
+        
+    plt.title('Weights')
+    
+    plt.imshow(pixels, cmap='gray')
+    plt.show()
+
+    #what should happen
+    #open weights
+    #create a matrix scaled to 255 pixel values for each weight matrix
+    #create matplotlib wwith 5x2 grid for all graphs
+    #set each graph to a weight matrix
+    #show all 10 weights across the 10 graphs
+
+
 #runs network and displays labels and images 
 def runNetwork():
     pass
 
 
 def main():
-     #init network
+    #init network
     numberNet = Network()
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
@@ -271,5 +310,9 @@ def main():
     print('finalAccuracy: ', finalAccuracy)
 
 
+
 #main()
-displayData()
+#displayData()
+visualizeWeights()
+
+
