@@ -25,8 +25,8 @@ class Network():
         self.stepSize = stepSize
         
 
-    #forwards an image throught the network and outputs the loss.
-    #saves the score outputs to the class.
+    #forwards an image throught the network.
+    #saves the score outputs and loss to the class.
     def forwardPass(self, image, labelIndex):
         #layer1 forward pass, happens to be only layer.
         self.h1 = self.l1.forwardPass(self.w1, image)
@@ -43,8 +43,7 @@ class Network():
 
     
     #tests the accuracy of single image, forward prop through network.
-    #returns a 0.0 or a 1.0 for accuracy.
-    #HAS NOT BEEN TESTED
+    #returns a 0 or 1 for accuracy.
     def accuracy(self, image, label):
         self.forwardPass(image, label)
         largestValue = 0 #index of largest value
@@ -59,25 +58,28 @@ class Network():
             return 0
         
     
-    #SHOULD BE UPDATED TO WORK WITH ACCURACY
+    #UPDATED TO WORK WITH ACCURACY
+    #HAS NOT BEEN TESTED
     #defines the accuracy of the network on the test data (10k images/labels)
     #returns the accuracy as a decimal value (1.0 is 100%)
     def accuracyTest(self, testImages, testLabels):
         #accuracy starts at 0, adds 1 for each correctly identified image
         accuracy = 0.0
-        #loops through all test data
+        ##loops through all test data
         for i in range(len(testImages)):
-            #forward props to get scores, stored as self.h1
-            self.forwardPass(testImages[i], testLabels[i])
-            largestValue = 0 #index of largest value
-             #finds the index of the largest score
-            for j in range(1, len(self.h1)):
-                #if there is a new larger value, updates index
-                if (self.h1[j] > self.h1[largestValue]):
-                    largestValue = j
-            #if the largest score is the correct class, add accuracy
-            if (largestValue == testLabels[i]):
-                accuracy += 1           
+        #    #forward props to get scores, stored as self.h1
+        #    self.forwardPass(testImages[i], testLabels[i])
+        #    largestValue = 0 #index of largest value
+        #     #finds the index of the largest score
+        #    for j in range(1, len(self.h1)):
+        #        #if there is a new larger value, updates index
+        #        if (self.h1[j] > self.h1[largestValue]):
+        #            largestValue = j
+        #    #if the largest score is the correct class, add accuracy
+        #    if (largestValue == testLabels[i]):
+        #        accuracy += 1
+            accuracy += self.accuracy(testImages[i], testLabels[i])           
+        
         #compute % accuracy
         return accuracy / len(testImages)
 
@@ -108,6 +110,7 @@ class Network():
         #update weights
         self.w1.updateGrad(self.stepSize, dW)
         #outputs data after training the minibatch
+        #should be upated to be used w/ outputData
         #output loss
         loss = loss / numData
         self.lossList.append(loss)
@@ -143,7 +146,7 @@ class Network():
     def train(self, trainImages, trainLabels, batchSize = 500):
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
-        #Should be updated to be randomly ordered.
+        #Should be updated to be randomly ordered and have iterations
         numMinibatches = int(len(trainImages)/batchSize)
         #creates an index to use for slicing
         dataIndex = 0
@@ -154,8 +157,8 @@ class Network():
         self.lossList = []
         self.accuracyList = []
         self.weightsList = []
-        self.dWList = []
         
+        #trains batches
         for i in range(int(len(trainImages)/batchSize)):
             #miniBatch time tracker
             miniBatchStartTime = time.perf_counter()
@@ -192,10 +195,13 @@ class Network():
 def importData(dir = './mnist'):
     #creates mndata object from mnist data
     mndata = MNIST(dir)
+
     #loads train data
     trainImages, trainLabels = mndata.load_training()
+
     #loads test data
     testImages, testLabels = mndata.load_testing()
+
     #returns as 4 lists
     return trainImages, trainLabels, testImages, testLabels
 
@@ -210,20 +216,6 @@ def displayData():
     accuracyList = pickle.load(accuracy)
     lossList = pickle.load(loss)
     weightsList = pickle.load(weights)
-
-    #averages accuracy data down to n = 100 points
-    avgAccuracy = []
-    avgLoss =[]
-##    dataPoints = 100
-##    for x in range(int(len(accuracyList) / dataPoints)):
-##        avgA = 0
-##        avgL = 0
-##        for j in range(100):
-##            avgA += accuracyList[x*dataPoints + j]
-##            avgL += lossList[x*dataPoints + j]
-##        #appends average to the average accuracy
-##        avgAccuracy.append(avgA / (len(accuracyList) / dataPoints))
-##        avgLoss.append(avgL / (len(lossList) / dataPoints))
 
     fig, (lossPlot, accuracyPlot, weightHist0, weightHist1) = plt.subplots(1,4)
 
@@ -311,7 +303,7 @@ def main():
 
 
 
-#main()
+main()
 #displayData()
 visualizeWeights()
 
