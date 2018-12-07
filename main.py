@@ -19,6 +19,7 @@ class Network():
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
         #init Biases
+        #could be added onto weights matrix later on
         self.b1 = ly.Bias(10)
         #init network layers
         #this is a single layer network w/ no activation function.
@@ -29,6 +30,7 @@ class Network():
 
     #forwards an image throught the network.
     #saves the score outputs and loss to the class.
+    #could be made to work with a list as the layers of the network
     def forwardPass(self, image, labelIndex):
         #layer1 forward pass, happens to be only layer.
         self.h1 = self.l1.forwardPass(self.w1, image)
@@ -39,6 +41,7 @@ class Network():
 
     #backprops through the network, using values stored in the layers.
     #returns the gradient of the weight classes.
+    #could be made to work with a list as layers of the network.
     def backwardPass(self):
         grad = self.loss.backwardPass()
         biasGrad = self.b1.backwardPass(grad)
@@ -62,26 +65,14 @@ class Network():
             return 0
         
     
-    #UPDATED TO WORK WITH ACCURACY
-    #HAS NOT BEEN TESTED
     #defines the accuracy of the network on the test data (10k images/labels)
     #returns the accuracy as a decimal value (1.0 is 100%)
     def accuracyTest(self, testImages, testLabels):
         #accuracy starts at 0, adds 1 for each correctly identified image
         accuracy = 0.0
+
         ##loops through all test data
         for i in range(len(testImages)):
-        #    #forward props to get scores, stored as self.h1
-        #    self.forwardPass(testImages[i], testLabels[i])
-        #    largestValue = 0 #index of largest value
-        #     #finds the index of the largest score
-        #    for j in range(1, len(self.h1)):
-        #        #if there is a new larger value, updates index
-        #        if (self.h1[j] > self.h1[largestValue]):
-        #            largestValue = j
-        #    #if the largest score is the correct class, add accuracy
-        #    if (largestValue == testLabels[i]):
-        #        accuracy += 1
             accuracy += self.accuracy(testImages[i], testLabels[i])           
         
         #compute % accuracy
@@ -92,102 +83,108 @@ class Network():
     #updates the gradient after find the avg gradient for the
     #entire minibatch.
     def trainBatch(self, miniBatchImages, miniBatchLabels):
-        #initializes return array the same size as weights
+        #initializes return array the same size as weights and biases
         dW = np.zeros(self.w1.weights.shape)
         dB = np.zeros(self.b1.bias.shape)
         #stores number of images being tested
         numData = len(miniBatchImages)
+
         #tracks accuracy, starts at 0
         accuracy = 0.0
         #tracks loss
         loss = 0.0
+
         #runs through the miniBatch
         for i in range(numData):
             #forwards a single image and label through the network.
             # should be done by accuarcy #self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
+            #adds to accuracy after forwards pass is complete
             accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
+
             #updates loss
             loss += self.loss.loss
-            #backprops and adds to weights
+
+            #backprops and adds to weights and biases
             biasGrad, weightGrad = self.backwardPass()
             dW += weightGrad
             dB += biasGrad
+
         #avg all gradients of the minibatch
         dW = dW / numData
         dB = dB / numData
-        #update weights
+
+        #update weights for minibatch gradients
         self.w1.updateGrad(self.stepSize, dW)
         self.b1.updateGrad(self.stepSize, dB)
+
         #outputs data after training the minibatch
-        #should be upated to be used w/ outputData
-        #output loss
+        #potential to make this a seperate method for output data
+
+        #average loss and accuracy
         loss = loss / numData
-        self.lossList.append(loss)
-        print('Loss: ', loss)
-        #output accuracy
-        #avg accuracy over miniBatch
         accuracy = accuracy / numData
-        self.accuracyList.append(accuracy)
-        print('Accuracy: ' , accuracy)
-        #output weights
-        weights = self.w1.weights
-        self.weightsList.append(weights)
-        print('Weights: ' , weights)
 
-
-    #ouputs data after a minibatch has trained
-    def outputData(self, loss, accuracy):
-        #output loss
+        #add values to self lists to be pickled after training is complete.
         self.lossList.append(loss)
-        print('Loss: ', loss)
-        #output accuracy
-        #avg accuracy over miniBatch
         self.accuracyList.append(accuracy)
+        self.weightsList.append(self.w1.weights)
+
+        #prints values to console so training can be seen
+        #gives confidence the network isn't dead for the whole
+        #train time.
+        print('Loss: ', loss)
         print('Accuracy: ' , accuracy)
-        #output weights
-        weights = self.w1.weights
-        self.weightsList.append(weights)
         print('Weights: ' , weights)
 
-      
+
     #trains the network. Takes in train data and optional batch size.
     #outputs data on the network each minibatch.
     def train(self, trainImages, trainLabels, batchSize = 500):
+
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered and have iterations
         numMinibatches = int(len(trainImages)/batchSize)
+
         #creates an index to use for slicing
         dataIndex = 0
+
         #times the network train time
         startTime = time.perf_counter()
 
-        #creates output lists
+        #creates output lists, updated in trainBatch and pickled
+        #after training is completed
         self.lossList = []
         self.accuracyList = []
         self.weightsList = []
 
-        #opens loss files
+        #opens loss files to output to
         lossFile = open('loss', 'wb')
         accuracyFile = open('accuracy', 'wb')
         weightsFile = open('weights', 'wb')
 
+        #adds initialized weights to file (so weights before training can be observed)
         self.weightsList.append(self.w1.weights)
         
         #trains batches
         for i in range(int(len(trainImages)/batchSize)):
+
             #miniBatch time tracker
             miniBatchStartTime = time.perf_counter()
+
             #slices train images and labels
             miniBatchImages = trainImages[dataIndex:dataIndex+batchSize]
             miniBatchLabels = trainLabels[dataIndex:dataIndex+batchSize]
+
             #updates dataIndex
             dataIndex += batchSize
+
             #trains the minibatch
             self.trainBatch(miniBatchImages, miniBatchLabels)
+
             #miniBatch time tracker
             miniBatchEndTime = time.perf_counter()
-            #ouputs miniBatch time
+            #ouputs miniBatch time (sanity check)
             print(miniBatchEndTime - miniBatchStartTime)
 
         #outputs data into files
@@ -195,14 +192,15 @@ class Network():
         pickle.dump(self.accuracyList, accuracyFile)
         pickle.dump(self.weightsList, weightsFile)
         
-
+        #closes files after data is output
         lossFile.close()
         accuracyFile.close()
         weightsFile.close()
 
-        #times the network train time
+        #times the networks total train time
         endTime = time.perf_counter()
-        #outputs the train time
+
+        #outputs the train time to console
         print('Train time: ' , endTime - startTime)
 
 
@@ -210,6 +208,7 @@ class Network():
 #uses the python-mnist module to import the data
 #imports from a given directory, predefined to /mnist
 def importData(dir = './mnist'):
+
     #creates mndata object from mnist data
     mndata = MNIST(dir)
 
@@ -224,71 +223,77 @@ def importData(dir = './mnist'):
 
 
 #displays the data that was logged during training
-#totally broken
+#needs work
 def displayData():
+
+    #opens pickled log files created during training
     accuracy = open('accuracy', 'rb')
     loss = open('loss', 'rb')
     weights = open('weights', 'rb')
 
+    #recreates the pickled objects
     accuracyList = pickle.load(accuracy)
     lossList = pickle.load(loss)
     weightsList = pickle.load(weights)
 
+    #closes pickle files once objects have been created.
     accuracy.close()
     loss.close()
     weights.close()
 
+    #creates a matplotlib figure w/ 4 graphs for
+    #loss, accuracy, intialized weights, and final weights
     fig, (lossPlot, accuracyPlot, weightHist0, weightHist1) = plt.subplots(1,4)
 
+    #plots loss and accuracy
     lossPlot.plot(lossList)
-
     accuracyPlot.plot(accuracyList)
 
-    #n, bins, patches = weightHist.hist(weightsList[0], 10, density = 1)
-    #this code shows a histogram
-    #plt.hist(data, bins = numBins)
-    #plt.show()
-
+    #reshapes first and last weights to be a list
     weights0 = weightsList[0].reshape(7840)
-    weightHist0.hist(weights0, bins = 20)
-
     weights1 = weightsList[len(weightsList) -1].reshape(7840)
+
+    #plots weights as histograms
+    weightHist0.hist(weights0, bins = 20)
     weightHist1.hist(weights1, bins = 20)
 
-
+    #shows plot
     plt.show()
 
 
-#needs to be updated to show all weights at once
+#needs work
+#vizualizes the weights in a network
 def visualizeWeights():
-    #load weights
+
+    #load weights as weightsList from pickled file
     weights = open('weights', 'rb')
     weightsList = pickle.load(weights)
     weights.close()
 
     #makes a list of np arrays for all weights
     weights = []
+    #could be made into a more dynamic loop
     for i in range(10):
         weights.append(np.array (weightsList[len(weightsList)-1][i]) )
-        #weights.append(np.array (weightsList[0][i]) )
-
+        
     #finds max to scale images
+    #could use numpy here to be more efficient
     maxPixel = 0
-    #for each set of weights
+    #loops through all elements of the weights
     for weight in weights:
-        #for each element in the weights
         for element in weight:
             #finds max value in ALL weights (shows importance among all scores equally)
             if (abs(element) > maxPixel):
                 maxPixel = abs(element)
 
-    #scales array
+    #scales array to 255.0 pixel values, reshapes weights to be a 28x28 image
     scalar = 255.0 / maxPixel
     for i in range(len(weights)):
         weights[i] *= scalar
         weights[i] = np.reshape(weights[i], (28,28))
 
-    #plots
+    #creates a plot for all weights
+    #there has to be a better way to do this...
     fig = plt.figure()
     ax1 = fig.add_subplot(251)
     ax1.imshow(weights[1], cmap = 'gray')
@@ -311,44 +316,42 @@ def visualizeWeights():
     ax0 = fig.add_subplot(2,5,10)
     ax0.imshow(weights[0], cmap = 'gray')
         
-    
-    #plt.imshow(pixels, cmap='gray')
+    #shows weights
     plt.show()
 
-    #what should happen
-    #open weights
-    #create a matrix scaled to 255 pixel values for each weight matrix
-    #create matplotlib wwith 5x2 grid for all graphs
-    #set each graph to a weight matrix
-    #show all 10 weights across the 10 graphs
 
-
-#runs network and displays labels and images 
+#runs network and displays labels and images
 def runNetwork():
     pass
 
 
+#this should become a method for training the network, which pickles the network
+#when it is completed so the network can be used again w/o training
 def main():
+
     #init network
     numberNet = Network()
+
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
+
     #test initial accuracy
     initialAccuracy = numberNet.accuracyTest(testImages, testLabels)
+
     #trains the network
     numberNet.train(trainImages, trainLabels)
-    #pickle weights for re-use.
-    ##to be implemeneted
+
     #tests final accuracy
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
+
     #display output data
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
 
 
-
+#this could be done better, just some code to run the network
+#and display the results
 main()
 displayData()
 visualizeWeights()
-
 

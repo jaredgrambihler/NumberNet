@@ -36,9 +36,9 @@ class Layer:
 class Weights:
 
     #random init of weights for x,y dimensions
-    #takes an optional distribution size for determining
-    #the spread of the normal distribution
+    #takes an optional distribution size
     def __init__(self, x, y, distribution = .01):
+
         self.weights = np.random.uniform(low = 0, high = 1, size = x*y) * distribution
         self.weights = np.reshape(self.weights, (x,y))
 
@@ -50,12 +50,15 @@ class Weights:
 
 
     #updates the weight matrix based on a gradient and stepsize
+    #this method should be called after a miniBatch computes a gradient.
     def updateGrad(self, stepSize, grad):
+
+        #performs update
         self.weights -= grad * stepSize
-        #takes sum using abs values
+
+        #Very bad regularization
+        #should be updated to work with an actual regularization function
         weightSum = sum(sum(abs(self.weights)))
-        #prevents weights from exploding using the sum, should be fixed later
-        #self.weights = self.weights / (weightSum * 784000)
         #prevents weights from exploding
         if(weightSum > 50):
             self.weights /= weightSum
@@ -63,8 +66,7 @@ class Weights:
 
 
 #unique last layer to be used to handle the loss.
-#might not be necesseray, depending on how output
-#data is coded.
+#Probably not necesseray.
 class Loss(Layer):
 
     #doesn't need to pass forward.
@@ -80,6 +82,7 @@ class Loss(Layer):
 
 
 #Addition layer for biases
+#could be built to work in weights multiplication (simplify code)
 class Bias(Layer):
 
     #inits biases to be 0
@@ -103,6 +106,7 @@ class Bias(Layer):
 
 
 #class for subtractice matrices.
+#not sure if this is ever needed.
 #HAS NOT BEEN TESTED
 class Subtraction(Layer):
 
@@ -118,6 +122,7 @@ class Subtraction(Layer):
 
 
 #computes a scalar operation
+#not sure if this is ever needed.
 #HAS NOT BEEN TESTED
 class Scalar(Layer):
     
@@ -134,38 +139,45 @@ class Scalar(Layer):
 
 
 
-#dot product b/w two vectors. Currently won't work if
-#the input2 is a 2D vector. input1 is weights, input2
-#is the image/previous layer. Need to be implemented
-#to work with more than 1D input2 vectors.
+#dot product b/w two vectors.
+#Code can likely be simplified to be more efficient
 class Multiplication(Layer):
     
     #Returns the dot product
     def forwardPass(self, input1, input2):
+
         #stores inputs, gets the weights matrix from weight layer passed in.
         self.input1 = input1.weights
         self.input2 = input2
+
         return self.input1.dot(self.input2)
 
 
     #returns grad only for input1
     def backwardPass(self, priorGradient):
+
         #creates an array for the gradients that is the same shape as the weights
         grad1 = np.zeros(self.input1.shape)
+
         #loops through number of previous gradients
         for i in range(len(priorGradient)):
+
             #loops through all previous inputs of 1d vector
             for j in range(len(self.input2)):
+
                 #adds to the weightGrad the priorGradient * 1d value for that element
                 #Creates a weightGrad matrix with all derivatives
                 grad1[i][j] = priorGradient[i] * self.input2[j]
 
         grad2 = np.zeros(len(self.input1[0]))
+
         for i in range(len(self.input1[0])):
             sum = 0
+
             for j in range(len(self.input1)):
                 sum += self.input1[j][i] * self.input2[i]
                 sum *= priorGradient[j]
+
             grad2[i] += sum
 
         return grad1, grad2
