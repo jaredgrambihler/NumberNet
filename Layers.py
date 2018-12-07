@@ -57,7 +57,7 @@ class Weights:
         #prevents weights from exploding using the sum, should be fixed later
         #self.weights = self.weights / (weightSum * 784000)
         #prevents weights from exploding
-        if(weightSum > 80):
+        if(weightSum > 50):
             self.weights /= weightSum
 
 
@@ -79,18 +79,26 @@ class Loss(Layer):
     
 
 
-#adds too matrices together. Useful for biases.
-#HAS NOT BEEN TESTED
-class Addition(Layer):
+#Addition layer for biases
+class Bias(Layer):
 
+    #inits biases to be 0
+    def __init__(self, x):
+        self.bias = np.zeros(x)
+
+    
     #adds two vectors
-    def forwardPass(self, input1, input2):
-       return input1 + input2
+    def forwardPass(self, input1):
+       return input1 + self.bias
     
 
     #passes back gradient
     def backwardPass(self, priorGradient):
         return priorGradient
+
+    #updates biases
+    def updateGrad(self, stepSize, grad):
+        self.bias -= stepSize * grad
 
 
 
@@ -143,16 +151,24 @@ class Multiplication(Layer):
     #returns grad only for input1
     def backwardPass(self, priorGradient):
         #creates an array for the gradients that is the same shape as the weights
-        weightGrad = np.zeros(self.input1.shape)
+        grad1 = np.zeros(self.input1.shape)
         #loops through number of previous gradients
         for i in range(len(priorGradient)):
             #loops through all previous inputs of 1d vector
             for j in range(len(self.input2)):
                 #adds to the weightGrad the priorGradient * 1d value for that element
                 #Creates a weightGrad matrix with all derivatives
-                weightGrad[i][j] = priorGradient[i] * self.input2[j]
-        return weightGrad
+                grad1[i][j] = priorGradient[i] * self.input2[j]
 
+        grad2 = np.zeros(len(self.input1[0]))
+        for i in range(len(self.input1[0])):
+            sum = 0
+            for j in range(len(self.input1)):
+                sum += self.input1[j][i] * self.input2[i]
+                sum *= priorGradient[j]
+            grad2[i] += sum
+
+        return grad1, grad2
 
 
 #1/x division
@@ -286,27 +302,21 @@ class Softmax(Layer):
 
     def forwardPass(self, input1, label):
         self.labelIndex = label
-        print('Label: ', self.labelIndex)
         self.input1 = input1
-        print('input ', self.input1)
         max = np.max(input1)
-        print('max' , max)
+        min = np.min(input1)
+        if((max - min) >= 744):
+            max = min + 744
         expNum = self.input1 - max
-        print('expNum', expNum)
         self.exp = np.exp(expNum)
-        print('exp', self.exp)
         self.sum = np.sum(self.exp)
-        print('sum ', self.sum)
         self.invSum = 1/self.sum
-        print('invSum ', self.invSum)
         self.normalScores = self.exp * self.invSum
-        print('Normal Scores: ',self.normalScores)
         self.loss = -math.log(self.normalScores[self.labelIndex])
-        print('Loss: ', self.loss)
 
     def backwardPass(self, priorGradient = 1.00):
         grad = np.zeros(np.shape(self.input1))
-        for i in range(grad):
+        for i in range(len(grad)):
             grad[i] = (-1/self.sum**2 * self.exp[i] + self.invSum) * self.exp[i]
         grad[self.labelIndex] *= -1/self.normalScores[self.labelIndex]
         return grad

@@ -18,6 +18,8 @@ class Network():
     def __init__(self, stepSize = 10e-3):
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
+        #init Biases
+        self.b1 = ly.Bias(10)
         #init network layers
         #this is a single layer network w/ no activation function.
         self.l1 = ly.Multiplication()
@@ -30,16 +32,18 @@ class Network():
     def forwardPass(self, image, labelIndex):
         #layer1 forward pass, happens to be only layer.
         self.h1 = self.l1.forwardPass(self.w1, image)
+        self.h2 = self.b1.forwardPass(self.h1)
         #loss function forward pass.
-        self.loss.forwardPass(self.h1, labelIndex)
+        self.loss.forwardPass(self.h2, labelIndex)
 
 
     #backprops through the network, using values stored in the layers.
     #returns the gradient of the weight classes.
     def backwardPass(self):
-        grad1 = self.loss.backwardPass()
-        grad2 = self.l1.backwardPass(grad1)
-        return grad2
+        grad = self.loss.backwardPass()
+        biasGrad = self.b1.backwardPass(grad)
+        weightGrad, imageGrad = self.l1.backwardPass(biasGrad)
+        return biasGrad, weightGrad
 
     
     #tests the accuracy of single image, forward prop through network.
@@ -50,7 +54,7 @@ class Network():
         #finds the index of the largest score
         for j in range(1, len(self.h1)):
             #if there is a new larger value, updates index
-            if (self.h1[j] > self.h1[largestValue]):
+            if (self.h2[j] > self.h2[largestValue]):
                 largestValue = j
         if (largestValue == label):
             return 1
@@ -90,6 +94,7 @@ class Network():
     def trainBatch(self, miniBatchImages, miniBatchLabels):
         #initializes return array the same size as weights
         dW = np.zeros(self.w1.weights.shape)
+        dB = np.zeros(self.b1.bias.shape)
         #stores number of images being tested
         numData = len(miniBatchImages)
         #tracks accuracy, starts at 0
@@ -104,11 +109,15 @@ class Network():
             #updates loss
             loss += self.loss.loss
             #backprops and adds to weights
-            dW += self.backwardPass()
+            biasGrad, weightGrad = self.backwardPass()
+            dW += weightGrad
+            dB += biasGrad
         #avg all gradients of the minibatch
         dW = dW / numData
+        dB = dB / numData
         #update weights
         self.w1.updateGrad(self.stepSize, dW)
+        self.b1.updateGrad(self.stepSize, dB)
         #outputs data after training the minibatch
         #should be upated to be used w/ outputData
         #output loss
@@ -157,6 +166,13 @@ class Network():
         self.lossList = []
         self.accuracyList = []
         self.weightsList = []
+
+        #opens loss files
+        lossFile = open('loss', 'wb')
+        accuracyFile = open('accuracy', 'wb')
+        weightsFile = open('weights', 'wb')
+
+        self.weightsList.append(self.w1.weights)
         
         #trains batches
         for i in range(int(len(trainImages)/batchSize)):
@@ -175,14 +191,15 @@ class Network():
             print(miniBatchEndTime - miniBatchStartTime)
 
         #outputs data into files
-        lossFile = open('loss', 'wb')
-        accuracyFile = open('accuracy', 'wb')
-        weightsFile = open('weights', 'wb')
-
         pickle.dump(self.lossList, lossFile)
         pickle.dump(self.accuracyList, accuracyFile)
         pickle.dump(self.weightsList, weightsFile)
         
+
+        lossFile.close()
+        accuracyFile.close()
+        weightsFile.close()
+
         #times the network train time
         endTime = time.perf_counter()
         #outputs the train time
@@ -217,6 +234,10 @@ def displayData():
     lossList = pickle.load(loss)
     weightsList = pickle.load(weights)
 
+    accuracy.close()
+    loss.close()
+    weights.close()
+
     fig, (lossPlot, accuracyPlot, weightHist0, weightHist1) = plt.subplots(1,4)
 
     lossPlot.plot(lossList)
@@ -234,7 +255,7 @@ def displayData():
     weights1 = weightsList[len(weightsList) -1].reshape(7840)
     weightHist1.hist(weights1, bins = 20)
 
-    plt.plot(avgAccuracy)
+
     plt.show()
 
 
@@ -243,6 +264,7 @@ def visualizeWeights():
     #load weights
     weights = open('weights', 'rb')
     weightsList = pickle.load(weights)
+    weights.close()
 
     #makes a list of np arrays for all weights
     weights = []
@@ -262,13 +284,35 @@ def visualizeWeights():
 
     #scales array
     scalar = 255.0 / maxPixel
-    
-    pixels = np.array(weights[8] * scalar)
-    pixels = np.reshape(pixels, (28,28))
+    for i in range(len(weights)):
+        weights[i] *= scalar
+        weights[i] = np.reshape(weights[i], (28,28))
+
+    #plots
+    fig = plt.figure()
+    ax1 = fig.add_subplot(251)
+    ax1.imshow(weights[1], cmap = 'gray')
+    ax2 = fig.add_subplot(252)
+    ax2.imshow(weights[2], cmap = 'gray')
+    ax3 = fig.add_subplot(253)
+    ax3.imshow(weights[3], cmap = 'gray')
+    ax4 = fig.add_subplot(254)
+    ax4.imshow(weights[4], cmap = 'gray')
+    ax5 = fig.add_subplot(255)
+    ax5.imshow(weights[5], cmap = 'gray')
+    ax6 = fig.add_subplot(256)
+    ax6.imshow(weights[6], cmap = 'gray')
+    ax7 = fig.add_subplot(257)
+    ax7.imshow(weights[7], cmap = 'gray')
+    ax8 = fig.add_subplot(258)
+    ax8.imshow(weights[8], cmap = 'gray')
+    ax9 = fig.add_subplot(259)
+    ax9.imshow(weights[9], cmap = 'gray')
+    ax0 = fig.add_subplot(2,5,10)
+    ax0.imshow(weights[0], cmap = 'gray')
         
-    plt.title('Weights')
     
-    plt.imshow(pixels, cmap='gray')
+    #plt.imshow(pixels, cmap='gray')
     plt.show()
 
     #what should happen
@@ -304,7 +348,7 @@ def main():
 
 
 main()
-#displayData()
+displayData()
 visualizeWeights()
 
 
