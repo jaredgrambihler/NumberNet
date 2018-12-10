@@ -313,22 +313,36 @@ class ReLU(Layer):
 class Softmax(Layer):
 
     def forwardPass(self, input1, label):
+
         self.labelIndex = label
         self.input1 = input1
+
         max = np.max(input1)
         min = np.min(input1)
         if((max - min) >= 744):
             max = min + 744
         expNum = self.input1 - max
+
         self.exp = np.exp(expNum)
+
         self.sum = np.sum(self.exp)
         self.invSum = 1/self.sum
-        self.normalScores = self.exp * self.invSum
-        self.loss = -math.log(self.normalScores[self.labelIndex])
+
+        self.probScores = self.exp * self.invSum
+
+        self.loss = -math.log(self.probScores[self.labelIndex])
+
+    #def backwardPass(self, priorGradient = 1.00):
+    #    grad = np.zeros(np.shape(self.input1))
+    #    for i in range(len(grad)):
+    #        grad[i] = (-1/self.sum**2 * self.exp[i] + self.invSum) * self.exp[i]
+    #    grad[self.labelIndex] *= -1/self.normalScores[self.labelIndex]
+    #    return grad
+
 
     def backwardPass(self, priorGradient = 1.00):
-        grad = np.zeros(np.shape(self.input1))
-        for i in range(len(grad)):
-            grad[i] = (-1/self.sum**2 * self.exp[i] + self.invSum) * self.exp[i]
-        grad[self.labelIndex] *= -1/self.normalScores[self.labelIndex]
+
+        grad = self.probScores
+        grad[self.labelIndex] -= 1
+            
         return grad

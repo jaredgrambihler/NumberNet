@@ -15,7 +15,7 @@ class Network():
     #the layers that are stored must be written here, although
     #the interactions b/w layers are in the forward and backward pass
     #methods.
-    def __init__(self, stepSize = 10e-3):
+    def __init__(self, stepSize = 10e-4 * 5):
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
         #init Biases
@@ -86,6 +86,7 @@ class Network():
         #initializes return array the same size as weights and biases
         dW = np.zeros(self.w1.weights.shape)
         dB = np.zeros(self.b1.bias.shape)
+
         #stores number of images being tested
         numData = len(miniBatchImages)
 
@@ -134,12 +135,12 @@ class Network():
         #train time.
         print('Loss: ', loss)
         print('Accuracy: ' , accuracy)
-        print('Weights: ' , weights)
+        print('Weights: ' , self.w1.weights)
 
 
     #trains the network. Takes in train data and optional batch size.
     #outputs data on the network each minibatch.
-    def train(self, trainImages, trainLabels, batchSize = 500):
+    def train(self, trainImages, trainLabels, batchSize = 5000):
 
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
@@ -173,8 +174,8 @@ class Network():
             miniBatchStartTime = time.perf_counter()
 
             #slices train images and labels
-            miniBatchImages = trainImages[dataIndex:dataIndex+batchSize]
-            miniBatchLabels = trainLabels[dataIndex:dataIndex+batchSize]
+            miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
+            miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
 
             #updates dataIndex
             dataIndex += batchSize
