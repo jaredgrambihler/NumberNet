@@ -5,6 +5,7 @@ import time
 import pickle
 import math
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 
@@ -138,20 +139,19 @@ class Network():
         print('Weights: ' , self.w1.weights)
 
 
-    #trains the network. Takes in train data and optional batch size.
-    #outputs data on the network each minibatch.
-    def train(self, trainImages, trainLabels, batchSize = 5000):
+    #trains the network. Takes in train data and optional batch size
+    #for a specified number of epochs and outputs data on the network
+    #for each minibatch.
+    def train(self, trainImages, trainLabels, batchSize = 5000, epochs = 1):
+
+        #times the network train time
+        startTime = time.perf_counter()
 
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered and have iterations
         numMinibatches = int(len(trainImages)/batchSize)
 
-        #creates an index to use for slicing
-        dataIndex = 0
-
-        #times the network train time
-        startTime = time.perf_counter()
 
         #creates output lists, updated in trainBatch and pickled
         #after training is completed
@@ -166,27 +166,34 @@ class Network():
 
         #adds initialized weights to file (so weights before training can be observed)
         self.weightsList.append(self.w1.weights)
-        
-        #trains batches
-        for i in range(int(len(trainImages)/batchSize)):
+            
+        #loops through data for specified number of times
+        for x in range(epochs):
+            
+            #creates an index to use for slicing
+            dataIndex = 0
+            
+            #trains batches
+            for i in range(int(len(trainImages)/batchSize)):
 
-            #miniBatch time tracker
-            miniBatchStartTime = time.perf_counter()
+                #miniBatch time tracker
+                miniBatchStartTime = time.perf_counter()
 
-            #slices train images and labels
-            miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
-            miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
+                #slices train images and labels
+                miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
+                miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
 
-            #updates dataIndex
-            dataIndex += batchSize
+                #updates dataIndex
+                dataIndex += batchSize
 
-            #trains the minibatch
-            self.trainBatch(miniBatchImages, miniBatchLabels)
+                #trains the minibatch
+                self.trainBatch(miniBatchImages, miniBatchLabels)
 
-            #miniBatch time tracker
-            miniBatchEndTime = time.perf_counter()
-            #ouputs miniBatch time (sanity check)
-            print(miniBatchEndTime - miniBatchStartTime)
+                #miniBatch time tracker
+                miniBatchEndTime = time.perf_counter()
+                #ouputs miniBatch time (sanity check)
+                print(miniBatchEndTime - miniBatchStartTime)
+
 
         #outputs data into files
         pickle.dump(self.lossList, lossFile)
@@ -273,13 +280,14 @@ def visualizeWeights():
 
     #makes a list of np arrays for all weights
     weights = []
-    #could be made into a more dynamic loop
+    #appends all 10 final weights to the list
     for i in range(10):
         weights.append(np.array (weightsList[len(weightsList)-1][i]) )
         
     #finds max to scale images
     #could use numpy here to be more efficient
     maxPixel = 0
+    
     #loops through all elements of the weights
     for weight in weights:
         for element in weight:
@@ -287,14 +295,14 @@ def visualizeWeights():
             if (abs(element) > maxPixel):
                 maxPixel = abs(element)
 
-    #scales array to 255.0 pixel values, reshapes weights to be a 28x28 image
+    #scales array to 255.0 pixel values
     scalar = 255.0 / maxPixel
     for i in range(len(weights)):
         weights[i] *= scalar
+        #reshapes the weights to be a 28x28 image
         weights[i] = np.reshape(weights[i], (28,28))
 
     #creates a plot for all weights
-    #there has to be a better way to do this...
     fig = plt.figure()
     ax1 = fig.add_subplot(251)
     ax1.imshow(weights[1], cmap = 'gray')
@@ -321,14 +329,9 @@ def visualizeWeights():
     plt.show()
 
 
-#runs network and displays labels and images
-def runNetwork():
-    pass
-
-
 #this should become a method for training the network, which pickles the network
 #when it is completed so the network can be used again w/o training
-def main():
+def trainNetwork():
 
     #init network
     numberNet = Network()
@@ -349,10 +352,50 @@ def main():
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
 
+    #pickles network for re-use
+    #NEEDS TO BE DEBUGGED
+    networkFile = open('network', 'wb')
+    pickle.dump(numberNet, networkFile)
+    networkFile.close()
+
+
+#runs network and displays labels and images
+#currently very broken
+def runNetwork(runTimes = 10):
+    
+    #import data
+    trainImages, trainLabels, testImages, testLabels = importData()
+
+    #opens network
+    networkFile = open('network', 'rb')
+    network = pickle.load(networkFile)
+    networkFile.close()
+
+    #creates a matplotlib animation
+    fig = plt.figure()
+    ax1 = fig.add_subpolt(1,1,1)
+
+    #needs to be debugged for image shape
+    #and numpy array?
+    #need to add titles as the network guesses for the images
+    def animate(i):
+        image = trainImages[i]
+        np.reshape(image, (28,28))
+        ax1.clear()
+        ax1.imshow(image, cmap = 'gray')
+
+
+    #will run for runTimes
+    for i in range(runTimes):
+        ani = animation.FuncAnimation(fig, animate, interval = 1000)
+        
+        
+    
+
 
 #this could be done better, just some code to run the network
 #and display the results
-main()
+trainNetwork()
 displayData()
 visualizeWeights()
 
