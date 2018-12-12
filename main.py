@@ -397,12 +397,12 @@ def runNetwork():
     def animate(i):
 
         #uses the image of i times 
-        image = np.array(trainImages[i])
+        image = np.array(testImages[i])
         image = np.reshape(image, (28,28))
 
         #runs a forwardPass, the trainLabel is needed so the function
         #works although this could be changed
-        network.forwardPass(trainImages[i], trainLabels[i])
+        network.forwardPass(testImages[i], testLabels[i])
 
         #gets scores from network and picks the max index as the number guess
         scores = np.array(network.loss.probScores)
@@ -428,4 +428,3 @@ trainNetwork()
 displayData()
 visualizeWeights()
 runNetwork()
-
