@@ -39,7 +39,8 @@ class Weights:
     #takes an optional distribution size
     def __init__(self, x, y, distribution = .01):
 
-        self.weights = np.random.uniform(low = 0, high = 1, size = x*y) * distribution
+        #guassian distribution w/ sd of sqrt(2/inputs)
+        self.weights = np.random.randn(x*y) * math.sqrt(2.0/y)
         self.weights = np.reshape(self.weights, (x,y))
 
 
@@ -51,17 +52,21 @@ class Weights:
 
     #updates the weight matrix based on a gradient and stepsize
     #this method should be called after a miniBatch computes a gradient.
-    def updateGrad(self, stepSize, grad):
+    def updateGrad(self, stepSize, grad, regularization = .1):
 
         #performs update
         self.weights -= grad * stepSize
 
-        #Very bad regularization
-        #should be updated to work with an actual regularization function
-        weightSum = sum(sum(abs(self.weights)))
-        #prevents weights from exploding
-        if(weightSum > 50):
-            self.weights /= weightSum
+        #regularization function of L2 Regularization
+        #Reference : http://cs231n.github.io/neural-networks-2/
+        self.weights -= regularization * self.weights
+
+        ##Very bad regularization
+        ##should be updated to work with an actual regularization function
+        #weightSum = sum(sum(abs(self.weights)))
+        ##prevents weights from exploding
+        #if(weightSum > 50):
+        #    self.weights /= weightSum
 
 
 
@@ -318,10 +323,10 @@ class Softmax(Layer):
         self.input1 = input1
 
         max = np.max(input1)
-        min = np.min(input1)
-        if((max - min) >= 744):
-            max = min + 744
-        expNum = self.input1 - max
+        #min = np.min(input1)
+        #if((max - min) >= 744):
+        #    max = min + 744
+        expNum = self.input1 / (max * 744)
 
         self.exp = np.exp(expNum)
 
