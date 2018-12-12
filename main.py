@@ -33,9 +33,11 @@ class Network():
     #saves the score outputs and loss to the class.
     #could be made to work with a list as the layers of the network
     def forwardPass(self, image, labelIndex):
+        
         #layer1 forward pass, happens to be only layer.
         self.h1 = self.l1.forwardPass(self.w1, image)
         self.h2 = self.b1.forwardPass(self.h1)
+
         #loss function forward pass.
         self.loss.forwardPass(self.h2, labelIndex)
 
@@ -151,7 +153,6 @@ class Network():
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered and have iterations
         numMinibatches = int(len(trainImages)/batchSize)
-
 
         #creates output lists, updated in trainBatch and pickled
         #after training is completed
@@ -353,7 +354,6 @@ def trainNetwork():
     print('finalAccuracy: ', finalAccuracy)
 
     #pickles network for re-use
-    #NEEDS TO BE DEBUGGED
     networkFile = open('network', 'wb')
     pickle.dump(numberNet, networkFile)
     networkFile.close()
@@ -361,7 +361,7 @@ def trainNetwork():
 
 #runs network and displays labels and images
 #currently very broken
-def runNetwork(runTimes = 10):
+def runNetwork():
     
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
@@ -373,21 +373,32 @@ def runNetwork(runTimes = 10):
 
     #creates a matplotlib animation
     fig = plt.figure()
-    ax1 = fig.add_subpolt(1,1,1)
+    ax1 = fig.add_subplot(1,1,1)
 
     #needs to be debugged for image shape
     #and numpy array?
     #need to add titles as the network guesses for the images
     def animate(i):
-        image = trainImages[i]
-        np.reshape(image, (28,28))
+
+        image = np.array(trainImages[i])
+        image = np.reshape(image, (28,28))
+
+        network.forwardPass(trainImages[i], trainLabels[i])
+
+        scores = np.array(network.loss.probScores)
+        maxScoreIndex = np.argmax(scores)
+
+        title = 'Network Guess: ' + str(maxScoreIndex) + 'Actual: ' + str(trainLabels[i])
+
         ax1.clear()
+        ax1.set_title(title)
         ax1.imshow(image, cmap = 'gray')
 
 
     #will run for runTimes
-    for i in range(runTimes):
-        ani = animation.FuncAnimation(fig, animate, interval = 1000)
+    ani = animation.FuncAnimation(fig, animate, interval = 2000)
+
+    plt.show()
         
         
     
@@ -395,7 +406,8 @@ def runNetwork(runTimes = 10):
 
 #this could be done better, just some code to run the network
 #and display the results
-trainNetwork()
+#trainNetwork()
 displayData()
 visualizeWeights()
+runNetwork()
 
