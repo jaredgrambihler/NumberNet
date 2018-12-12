@@ -17,11 +17,14 @@ class Network():
     #the interactions b/w layers are in the forward and backward pass
     #methods.
     def __init__(self, stepSize = 10e-4 * 5):
+        
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
+        
         #init Biases
         #could be added onto weights matrix later on
         self.b1 = ly.Bias(10)
+        
         #init network layers
         #this is a single layer network w/ no activation function.
         self.l1 = ly.Multiplication()
@@ -46,23 +49,32 @@ class Network():
     #returns the gradient of the weight classes.
     #could be made to work with a list as layers of the network.
     def backwardPass(self):
+        
         grad = self.loss.backwardPass()
+        
         biasGrad = self.b1.backwardPass(grad)
+        
         weightGrad, imageGrad = self.l1.backwardPass(biasGrad)
+        
         return biasGrad, weightGrad
 
     
     #tests the accuracy of single image, forward prop through network.
     #returns a 0 or 1 for accuracy.
     def accuracy(self, image, label):
+        
         self.forwardPass(image, label)
         largestValue = 0 #index of largest value
+        
         #finds the index of the largest score
         for j in range(1, len(self.h1)):
+            
             #if there is a new larger value, updates index
             if (self.h2[j] > self.h2[largestValue]):
                 largestValue = j
+                
         if (largestValue == label):
+            
             return 1
         else:
             return 0
@@ -71,6 +83,7 @@ class Network():
     #defines the accuracy of the network on the test data (10k images/labels)
     #returns the accuracy as a decimal value (1.0 is 100%)
     def accuracyTest(self, testImages, testLabels):
+        
         #accuracy starts at 0, adds 1 for each correctly identified image
         accuracy = 0.0
 
@@ -86,6 +99,7 @@ class Network():
     #updates the gradient after find the avg gradient for the
     #entire minibatch.
     def trainBatch(self, miniBatchImages, miniBatchLabels):
+        
         #initializes return array the same size as weights and biases
         dW = np.zeros(self.w1.weights.shape)
         dB = np.zeros(self.b1.bias.shape)
@@ -100,6 +114,7 @@ class Network():
 
         #runs through the miniBatch
         for i in range(numData):
+            
             #forwards a single image and label through the network.
             # should be done by accuarcy #self.forwardPass(miniBatchImages[i], miniBatchLabels[i])
             #adds to accuracy after forwards pass is complete
@@ -192,7 +207,7 @@ class Network():
 
                 #miniBatch time tracker
                 miniBatchEndTime = time.perf_counter()
-                #ouputs miniBatch time (sanity check)
+                #ouputs miniBatch time (sanity check while running)
                 print(miniBatchEndTime - miniBatchStartTime)
 
 
@@ -270,66 +285,6 @@ def displayData():
     plt.show()
 
 
-#needs work
-#vizualizes the weights in a network
-def visualizeWeights():
-
-    #load weights as weightsList from pickled file
-    weights = open('weights', 'rb')
-    weightsList = pickle.load(weights)
-    weights.close()
-
-    #makes a list of np arrays for all weights
-    weights = []
-    #appends all 10 final weights to the list
-    for i in range(10):
-        weights.append(np.array (weightsList[len(weightsList)-1][i]) )
-        
-    #finds max to scale images
-    #could use numpy here to be more efficient
-    maxPixel = 0
-    
-    #loops through all elements of the weights
-    for weight in weights:
-        for element in weight:
-            #finds max value in ALL weights (shows importance among all scores equally)
-            if (abs(element) > maxPixel):
-                maxPixel = abs(element)
-
-    #scales array to 255.0 pixel values
-    scalar = 255.0 / maxPixel
-    for i in range(len(weights)):
-        weights[i] *= scalar
-        #reshapes the weights to be a 28x28 image
-        weights[i] = np.reshape(weights[i], (28,28))
-
-    #creates a plot for all weights
-    fig = plt.figure()
-    ax1 = fig.add_subplot(251)
-    ax1.imshow(weights[1], cmap = 'gray')
-    ax2 = fig.add_subplot(252)
-    ax2.imshow(weights[2], cmap = 'gray')
-    ax3 = fig.add_subplot(253)
-    ax3.imshow(weights[3], cmap = 'gray')
-    ax4 = fig.add_subplot(254)
-    ax4.imshow(weights[4], cmap = 'gray')
-    ax5 = fig.add_subplot(255)
-    ax5.imshow(weights[5], cmap = 'gray')
-    ax6 = fig.add_subplot(256)
-    ax6.imshow(weights[6], cmap = 'gray')
-    ax7 = fig.add_subplot(257)
-    ax7.imshow(weights[7], cmap = 'gray')
-    ax8 = fig.add_subplot(258)
-    ax8.imshow(weights[8], cmap = 'gray')
-    ax9 = fig.add_subplot(259)
-    ax9.imshow(weights[9], cmap = 'gray')
-    ax0 = fig.add_subplot(2,5,10)
-    ax0.imshow(weights[0], cmap = 'gray')
-        
-    #shows weights
-    plt.show()
-
-
 #this should become a method for training the network, which pickles the network
 #when it is completed so the network can be used again w/o training
 def trainNetwork():
@@ -359,54 +314,117 @@ def trainNetwork():
     networkFile.close()
 
 
+#vizualizes the weights in a network
+def visualizeWeights():
+
+    #load weights as weightsList from pickled file
+    weights = open('weights', 'rb')
+    weightsList = pickle.load(weights)
+    weights.close()
+
+    #makes a list of np arrays for all weights
+    weights = []
+    
+    #appends all 10 final weights to the list
+    for i in range(10):
+        weights.append(np.array (weightsList[len(weightsList)-1][i]) )
+        
+    #finds max to scale images
+    #could use numpy here to be more efficient
+    maxPixel = 0
+    
+    #loops through all elements of the weights
+    for weight in weights:
+        for element in weight:
+            
+            #finds max value in ALL weights (shows importance among all scores equally)
+            if (abs(element) > maxPixel):
+                maxPixel = abs(element)
+
+    #scales array to 255.0 pixel values
+    scalar = 255.0 / maxPixel
+    
+    for i in range(len(weights)):
+        weights[i] *= scalar
+        
+        #reshapes the weights to be a 28x28 image
+        weights[i] = np.reshape(weights[i], (28,28))
+
+    #creates a plot for all weights
+    fig = plt.figure()
+    
+    ax1 = fig.add_subplot(251)
+    ax1.imshow(weights[1], cmap = 'gray')
+    ax2 = fig.add_subplot(252)
+    ax2.imshow(weights[2], cmap = 'gray')
+    ax3 = fig.add_subplot(253)
+    ax3.imshow(weights[3], cmap = 'gray')
+    ax4 = fig.add_subplot(254)
+    ax4.imshow(weights[4], cmap = 'gray')
+    ax5 = fig.add_subplot(255)
+    ax5.imshow(weights[5], cmap = 'gray')
+    ax6 = fig.add_subplot(256)
+    ax6.imshow(weights[6], cmap = 'gray')
+    ax7 = fig.add_subplot(257)
+    ax7.imshow(weights[7], cmap = 'gray')
+    ax8 = fig.add_subplot(258)
+    ax8.imshow(weights[8], cmap = 'gray')
+    ax9 = fig.add_subplot(259)
+    ax9.imshow(weights[9], cmap = 'gray')
+    ax0 = fig.add_subplot(2,5,10)
+    ax0.imshow(weights[0], cmap = 'gray')
+        
+    #shows weights
+    plt.show()
+
+
 #runs network and displays labels and images
-#currently very broken
 def runNetwork():
     
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
 
-    #opens network
+    #opens network as 'network'
     networkFile = open('network', 'rb')
     network = pickle.load(networkFile)
     networkFile.close()
 
-    #creates a matplotlib animation
+    #creates a matplotlib figure to show images
     fig = plt.figure()
     ax1 = fig.add_subplot(1,1,1)
 
-    #needs to be debugged for image shape
-    #and numpy array?
-    #need to add titles as the network guesses for the images
+    #defines animate for matplotlib function
     def animate(i):
 
+        #uses the image of i times 
         image = np.array(trainImages[i])
         image = np.reshape(image, (28,28))
 
+        #runs a forwardPass, the trainLabel is needed so the function
+        #works although this could be changed
         network.forwardPass(trainImages[i], trainLabels[i])
 
+        #gets scores from network and picks the max index as the number guess
         scores = np.array(network.loss.probScores)
         maxScoreIndex = np.argmax(scores)
 
-        title = 'Network Guess: ' + str(maxScoreIndex) + 'Actual: ' + str(trainLabels[i])
+        #creates a title for the image showing the guess and true value
+        title = 'Network Guess: ' + str(maxScoreIndex) + ' Actual: ' + str(trainLabels[i])
 
+        #plots the image
         ax1.clear()
         ax1.set_title(title)
         ax1.imshow(image, cmap = 'gray')
 
-
-    #will run for runTimes
+    #creates the matplotlib animation, shows a new image every 2 seconds
     ani = animation.FuncAnimation(fig, animate, interval = 2000)
 
     plt.show()
         
-        
-    
-
 
 #this could be done better, just some code to run the network
 #and display the results
-#trainNetwork()
+trainNetwork()
 displayData()
 visualizeWeights()
 runNetwork()

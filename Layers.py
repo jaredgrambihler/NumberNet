@@ -52,7 +52,7 @@ class Weights:
 
     #updates the weight matrix based on a gradient and stepsize
     #this method should be called after a miniBatch computes a gradient.
-    def updateGrad(self, stepSize, grad, regularization = .1):
+    def updateGrad(self, stepSize, grad, regularization = .2):
 
         #performs update
         self.weights -= grad * stepSize
@@ -61,29 +61,6 @@ class Weights:
         #Reference : http://cs231n.github.io/neural-networks-2/
         self.weights -= regularization * self.weights
 
-        ##Very bad regularization
-        ##should be updated to work with an actual regularization function
-        #weightSum = sum(sum(abs(self.weights)))
-        ##prevents weights from exploding
-        #if(weightSum > 50):
-        #    self.weights /= weightSum
-
-
-
-#unique last layer to be used to handle the loss.
-#Probably not necesseray.
-class Loss(Layer):
-
-    #doesn't need to pass forward.
-    def forwardPass(self, input1):
-        self.loss = input1
-        #outputs data?
-
-
-    #gradient of the loss w/ respect to itself is always 1.
-    def backwardPass(self):
-        return 1.00
-    
 
 
 #Addition layer for biases
@@ -107,40 +84,6 @@ class Bias(Layer):
     #updates biases
     def updateGrad(self, stepSize, grad):
         self.bias -= stepSize * grad
-
-
-
-#class for subtractice matrices.
-#not sure if this is ever needed.
-#HAS NOT BEEN TESTED
-class Subtraction(Layer):
-
-    #first input vector is the first in operation.
-    def forwardPass(self, input1, input2):
-        return input1-input2
-
-
-    #flips the gradient for subtracted element, passes back gradient for first element. 
-    def backwardPass(self, priorGradient):
-        return priorGradient, priorGradient*-1
-
-
-
-#computes a scalar operation
-#not sure if this is ever needed.
-#HAS NOT BEEN TESTED
-class Scalar(Layer):
-    
-    #takes a vector input and a scalar float value
-    def forwardPass(self, input1, scalar):
-        #saves scalar for backprop
-        self.scalar = scalar
-        return scalar * input1
-
-
-    #returns scaled vector gradient
-    def backwardPass(self, priorGradient):
-        return self.scalar * priorGradient
 
 
 
@@ -186,6 +129,85 @@ class Multiplication(Layer):
             grad2[i] += sum
 
         return grad1, grad2
+
+
+
+#ReLU activation function
+#HAS NOT BEEN TESTED
+class ReLU(Layer):
+
+    #forces negative values to 0
+    def forwardPass(self, input1):
+        
+        self.result = np.maximum(0, input1)
+        
+        return self.result
+
+
+    #sets not activated values to 0 for the gradient
+    def backwardPass(self, priorGradient):
+        
+        #where self.result is 0, grad goes to 0
+        #sets return array values to 1, same size as priorGradient
+        multgrad = np.ones(priorGradient.shape)
+        
+        #forces 0 values to 0 for return gradient
+        multgrad *= self.result
+        
+        #all values are preserved *1 or forced to 0
+        return multgrad * priorGradient
+
+
+
+#Computes a softmax loss.
+#the reference to this function is here:
+#http://cs231n.github.io/linear-classify/#softmax
+class Softmax(Layer):
+
+    #forwards scores and the correct input through the function
+    def forwardPass(self, input1, label):
+
+        #saves label input for backward pass
+        self.labelIndex = label
+
+        #prevents values from being too high to exponentiate (744)
+        #Also tries not to shrink them so low they vanish to 0 and
+        #cannot be logged.
+        maxVal = np.max(input1)
+        expNum = input1 / (maxVal * 744)
+
+        #exponentiates safe values
+        exp = np.exp(expNum)
+
+        #sums all weights and creates 1/sum to multiply
+        #and find the probability scores
+        sumVal = np.sum(exp)
+        invSum = 1/sumVal
+
+        #calculates probScores and saves for back pass
+        self.probScores = exp * invSum
+
+        #computes loss
+        self.loss = -math.log(self.probScores[self.labelIndex])
+
+
+    #simplified derived gradient for softmax loss.
+    #the whole function isn't showed in this math.
+    def backwardPass(self, priorGradient = 1.00):
+
+        grad = self.probScores
+        grad[self.labelIndex] -= 1
+            
+        return grad
+
+
+
+###############################################
+#The following methods weren't found to be    #
+#useful for creating networks, but could have #
+#some use to a unique classifier, so they are #
+#left below.                                  #
+###############################################
 
 
 #1/x division
@@ -261,93 +283,53 @@ class Exp(Layer):
 
 
 
-#ReLU activation function
+#class for subtractice matrices.
+#not sure if this is ever needed.
 #HAS NOT BEEN TESTED
-class ReLU(Layer):
+class Subtraction(Layer):
 
-    #forces negative values to 0
-    def forwardPass(self, input1):
-        self.result = np.maximum(0, input1)
-        return self.result
+    #first input vector is the first in operation.
+    def forwardPass(self, input1, input2):
+        return input1-input2
 
 
-    #sets not activated values to 0 for the gradient
+    #flips the gradient for subtracted element, passes back gradient for first element. 
     def backwardPass(self, priorGradient):
-        #where self.result is 0, grad goes to 0
-        #sets return array values to 1, same size as priorGradient
-        multgrad = np.ones(priorGradient.shape)
-        #forces 0 values to 0 for return gradient
-        multgrad *= self.result 
-        #all values are preserves *1 or forced to 0
-        return multgrad * priorGradient
+        return priorGradient, priorGradient*-1
 
 
 
-##new attempt at softmax, FUNCTIONAL
-#class Softmax(Layer):
-
-#    def forwardPass(self, input1, labelIndex):
-#        #saves label index
-#        self.labelIndex = labelIndex
-#        #exponentiates, can easily explode here
-#        self.expValue = np.exp(input1)
-#        #sums for division, does 1/sum so it can be a scalar in the following layer
-#        self.sum = 1/np.sum(self.expValue)
-#        #combines label value w/ sum
-#        self.classScore = self.expValue[labelIndex] * self.sum
-#        #takes -ln of score.
-#        #as the score approaches 1 (perfect score), loss will approach 0
-#        self.loss = -math.log(self.classScore)
+#computes a scalar operation
+#not sure if this is ever needed.
+class Scalar(Layer):
+    
+    #takes a vector input and a scalar float value
+    def forwardPass(self, input1, scalar):
+        #saves scalar for backprop
+        self.scalar = scalar
+        return scalar * input1
 
 
-#    def backwardPass(self, priorGradient = 1.00):
-#        grad = priorGradient * -1/self.classScore
-#        dSum = grad * self.expValue[self.labelIndex]
-#        dLabelIndex = grad * self.sum
-#        returnGrad = np.ones(self.expValue.shape)
-#        for i in range(len(returnGrad)):
-#            returnGrad[i] = dSum * -self.sum**-2
-#        #adds gradients
-#        returnGrad[self.labelIndex] += dLabelIndex
-#        returnGrad *= self.expValue
-#        return returnGrad
+    #returns scaled vector gradient
+    def backwardPass(self, priorGradient):
+        return self.scalar * priorGradient
 
 
 
-#third attempt
-class Softmax(Layer):
 
-    def forwardPass(self, input1, label):
+#unique last layer to be used to handle the loss.
+#Probably not necesseray.
+class Loss(Layer):
 
-        self.labelIndex = label
-        self.input1 = input1
-
-        max = np.max(input1)
-        #min = np.min(input1)
-        #if((max - min) >= 744):
-        #    max = min + 744
-        expNum = self.input1 / (max * 744)
-
-        self.exp = np.exp(expNum)
-
-        self.sum = np.sum(self.exp)
-        self.invSum = 1/self.sum
-
-        self.probScores = self.exp * self.invSum
-
-        self.loss = -math.log(self.probScores[self.labelIndex])
-
-    #def backwardPass(self, priorGradient = 1.00):
-    #    grad = np.zeros(np.shape(self.input1))
-    #    for i in range(len(grad)):
-    #        grad[i] = (-1/self.sum**2 * self.exp[i] + self.invSum) * self.exp[i]
-    #    grad[self.labelIndex] *= -1/self.normalScores[self.labelIndex]
-    #    return grad
+    #doesn't need to pass forward.
+    def forwardPass(self, input1):
+        self.loss = input1
+        #outputs data?
 
 
-    def backwardPass(self, priorGradient = 1.00):
+    #gradient of the loss w/ respect to itself is always 1.
+    def backwardPass(self):
+        return 1.00
+    
 
-        grad = self.probScores
-        grad[self.labelIndex] -= 1
-            
-        return grad
+
