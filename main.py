@@ -16,7 +16,7 @@ class Network():
     #the layers that are stored must be written here, although
     #the interactions b/w layers are in the forward and backward pass
     #methods.
-    def __init__(self, stepSize = 10e-4 * 5):
+    def __init__(self, stepSize = 10e-5 * 2):
         
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
@@ -426,6 +426,6 @@ def runNetwork():
 #and display the results
 trainNetwork()
 displayData()
-visualizeWeights()
+#visualizeWeights()
 runNetwork()
 
