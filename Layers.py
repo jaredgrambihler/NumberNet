@@ -52,7 +52,7 @@ class Weights:
 
     #updates the weight matrix based on a gradient and stepsize
     #this method should be called after a miniBatch computes a gradient.
-    def updateGrad(self, stepSize, grad, regularization = .2):
+    def updateGrad(self, stepSize, grad, regularization = .3):
 
         #performs update
         self.weights -= grad * stepSize

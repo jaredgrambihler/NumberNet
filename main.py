@@ -16,7 +16,7 @@ class Network():
     #the layers that are stored must be written here, although
     #the interactions b/w layers are in the forward and backward pass
     #methods.
-    def __init__(self, stepSize = 10e-5 * 2):
+    def __init__(self, stepSize = 10e-7):
         
         #init weights, size is (labelNumbers, imagePixels)
         self.w1 = ly.Weights(10, 784)
@@ -159,7 +159,7 @@ class Network():
     #trains the network. Takes in train data and optional batch size
     #for a specified number of epochs and outputs data on the network
     #for each minibatch.
-    def train(self, trainImages, trainLabels, batchSize = 5000, epochs = 1):
+    def train(self, trainImages, trainLabels, batchSize = 2500, epochs = 2):
 
         #times the network train time
         startTime = time.perf_counter()
@@ -305,6 +305,7 @@ def trainNetwork():
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
 
     #display output data
+    print('Bias: ', numberNet.b1.bias)
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
 
@@ -391,7 +392,7 @@ def runNetwork():
 
     #creates a matplotlib figure to show images
     fig = plt.figure()
-    ax1 = fig.add_subplot(1,1,1)
+    ax1 = fig.add_subplot(1,2,1)
 
     #defines animate for matplotlib function
     def animate(i):
@@ -409,7 +410,7 @@ def runNetwork():
         maxScoreIndex = np.argmax(scores)
 
         #creates a title for the image showing the guess and true value
-        title = 'Network Guess: ' + str(maxScoreIndex) + ' Actual: ' + str(trainLabels[i])
+        title = 'Network Guess: ' + str(maxScoreIndex) + ' Actual: ' + str(testLabels[i])
 
         #plots the image
         ax1.clear()
