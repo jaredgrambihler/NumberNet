@@ -117,13 +117,13 @@ class Multiplication(Layer):
                 #Creates a weightGrad matrix with all derivatives
                 grad1[i][j] = priorGradient[i] * self.input2[j]
 
-        grad2 = np.zeros(len(self.input1[0]))
+        grad2 = np.zeros(len(self.input2))
 
         for i in range(len(self.input1[0])):
             sum = 0
 
             for j in range(len(self.input1)):
-                sum += self.input1[j][i] * self.input2[i]
+                sum += self.input1[j][i]
                 sum *= priorGradient[j]
 
             grad2[i] += sum
@@ -133,7 +133,6 @@ class Multiplication(Layer):
 
 
 #ReLU activation function
-#HAS NOT BEEN TESTED
 class ReLU(Layer):
 
     #forces negative values to 0
@@ -160,7 +159,7 @@ class ReLU(Layer):
 
 
 #Computes a softmax loss.
-#the reference to this function is here:
+#the reference to the math of this function is here:
 #http://cs231n.github.io/linear-classify/#softmax
 class Softmax(Layer):
 
@@ -211,7 +210,6 @@ class Softmax(Layer):
 
 
 #1/x division
-#HAS NOT BEEN TESTED
 class Division(Layer):
 
     #stores input1 and returns 1/input1
@@ -227,7 +225,6 @@ class Division(Layer):
 
 
 #computes max as a sum of the total array
-#HAS NOT BEEN TESTED
 class Max(Layer):
 
     #returns whatever array has a greater sum
@@ -252,7 +249,6 @@ class Max(Layer):
 
 
 #natural log
-#HAS NOT BEEN TESTED
 class Log(Layer):
 
     #returns ln(x), stores input 
@@ -267,7 +263,6 @@ class Log(Layer):
 
 
 #e^x
-#HAS NOT BEEN TESTED
 class Exp(Layer):
 
     #exponentiates the input
@@ -285,7 +280,6 @@ class Exp(Layer):
 
 #class for subtractice matrices.
 #not sure if this is ever needed.
-#HAS NOT BEEN TESTED
 class Subtraction(Layer):
 
     #first input vector is the first in operation.
@@ -300,7 +294,6 @@ class Subtraction(Layer):
 
 
 #computes a scalar operation
-#not sure if this is ever needed.
 class Scalar(Layer):
     
     #takes a vector input and a scalar float value
@@ -313,23 +306,6 @@ class Scalar(Layer):
     #returns scaled vector gradient
     def backwardPass(self, priorGradient):
         return self.scalar * priorGradient
-
-
-
-
-#unique last layer to be used to handle the loss.
-#Probably not necesseray.
-class Loss(Layer):
-
-    #doesn't need to pass forward.
-    def forwardPass(self, input1):
-        self.loss = input1
-        #outputs data?
-
-
-    #gradient of the loss w/ respect to itself is always 1.
-    def backwardPass(self):
-        return 1.00
     
 
 

@@ -425,7 +425,7 @@ def runNetwork():
 
 #this could be done better, just some code to run the network
 #and display the results
-#trainNetwork()
-#displayData()
+trainNetwork()
+displayData()
 visualizeWeights()
 runNetwork()
