@@ -3,56 +3,71 @@ import math
 
 
 class Layer:
+    """
+    Layer class to be implemented for different layer operations.
+    All layers have a forward and backwardPass method.
+    """
     
-    #defines init for all methods to be a pass. Variables should be created
-    #during the forward and backward passes. Multiple input operations (e.g. 5+3+2) 
-    #should be computed using two seperate gate combinations (e.g. do the 5+3 operation, 
-    #then do +2 to that answer) to manage variables in layers.
     def __init__(self):
+        """
+        Defines the general init to be a pass.
+        Variables for layers are saved on a case by case basis in the 
+        forward pass functions.
+        """
         pass
 
 
-    #to be implemented for each layer. Returns an output to be passed forward
-    #and stored in the following layer.
     def forwardPass(self):
+        """
+        This method is unique for each layer.
+        The information needed for the backward pass is saved to the class
+        during the function.
+        """
         pass
 
 
-    #to be implemented for each layer. Recieves a gradient as input, returns
-    #a gradient to be passed back to prior layer. If there are several inputs,
-    #the values are returned in order of the input #'s
     def backwardPass(self, priorGradient):
+        """
+        Unique to each layer.
+        Recieves a gradient for it's input
+        return the local gradient times the prior gradient (chain rule)
+        If several inputs exist to the function, they should be returned
+        in the same order as the inputs in the forwardPass
+        """
         pass
 
 
-    #fixes error for 2 gradients combining in backprop
     def backwardPass(self, gradient1, gradient2):
+        """
+        Solves the potential problem of gradients coming
+        together by adding them together
+        """
         gradient = gradient1 + gradient2
         backwardPass(gradient)
 
 
 
-#class for weights
 class Weights:
+    """
+    Class to handle weights in the network
+    """
 
-    #random init of weights for x,y dimensions
-    #takes an optional distribution size
-    def __init__(self, x, y, distribution = .01):
-
+    def __init__(self, x, y):
+        """
+        Creates weights based on the input size.
+        x = number of outputs
+        y = number of inputs
+        """
         #guassian distribution w/ sd of sqrt(2/inputs)
         self.weights = np.random.randn(x*y) * math.sqrt(2.0/y)
         self.weights = np.reshape(self.weights, (x,y))
 
 
-    #backwardPass for gradients on weights
-    #this method is irrelevant for a weights matrix
-    def backwardPass(self, priorGradient):
-        pass
-
-
-    #updates the weight matrix based on a gradient and stepsize
-    #this method should be called after a miniBatch computes a gradient.
-    def updateGrad(self, stepSize, grad, regularization = .3):
+    def updateGrad(self, stepSize, grad, regularization):
+        """
+        Updates the weights based on gradient, stepSize, and Regularization.
+        Should be called after the avg gradient is computed for a minibatch
+        """
 
         #performs update
         self.weights -= grad * stepSize
@@ -61,111 +76,157 @@ class Weights:
         #Reference : http://cs231n.github.io/neural-networks-2/
         self.weights -= regularization * self.weights
 
+    def getWeights(self):
+        """
+        Returns the weights
+        """
+        return self.weights
 
 
-#Addition layer for biases
-#could be built to work in weights multiplication (simplify code)
+
 class Bias(Layer):
+    """
+    Layer for biases.
+    Should be implemented after weights and input are multiplied together.
+    """
 
-    #inits biases to be 0
     def __init__(self, x):
+        """
+        Creates biases of length 'n' to all be zero
+        """
         self.bias = np.zeros(x)
 
-    
-    #adds two vectors
+
     def forwardPass(self, input1):
-       return input1 + self.bias
+        """
+        adds the biases to the 1D input vector
+        Returns Result
+        """
+        return input1 + self.bias
     
 
-    #passes back gradient
     def backwardPass(self, priorGradient):
+        """
+        There is no local gradient to an addition function.
+        Returns the priorGradient as is
+        """
         return priorGradient
 
-    #updates biases
+
     def updateGrad(self, stepSize, grad):
+        """
+        Performs an update to the biases.
+        Should be done after the avg is computes from a minibatch
+        """
         self.bias -= stepSize * grad
 
+    def getBias(self):
+        """
+        Returns the biases
+        """
+        return self.bias
 
 
-#dot product b/w two vectors.
-#Code can likely be simplified to be more efficient
+
 class Multiplication(Layer):
-    
-    #Returns the dot product
-    def forwardPass(self, input1, input2):
+    """
+    Multiplies together two matrices
+    weights = weights matrix
+    input = 1D input vector
+    """
 
-        #stores inputs, gets the weights matrix from weight layer passed in.
-        self.input1 = input1.weights
-        self.input2 = input2
+    def forwardPass(self, weights, input):
+        """
+        stores weights and input for the backward pass.
+         Returns a dot product between them
+        """
+        self.weights = weights.getWeights()
+        self.input = input
+        return np.dot(self.weights, self.input)
 
-        return self.input1.dot(self.input2)
 
-
-    #returns grad only for input1
     def backwardPass(self, priorGradient):
+        """
+        Computes gradients of both the weights and the input
+        Returns weightGrad, inputGrad
+        """
+        #creates matrices of the proper size to hold the gradients
+        weightGrad = np.ones(np.shape(self.weights))
+        inputGrad = np.ones(np.shape(self.input))
 
-        #creates an array for the gradients that is the same shape as the weights
-        grad1 = np.zeros(self.input1.shape)
-
-        #loops through number of previous gradients
+        #creates the weightGrad
+        for i in range(len(self.input)):
+            #mutiplies the input at i to the entire row
+            #of weights it ends up impacting
+            tempGrad = self.input[i]
+            weightGrad[: , i] = tempGrad
         for i in range(len(priorGradient)):
+            #takes the priorGradient at i and multiplies
+            #it to the entire row that was a part of it's result
+            weightGrad[i] *= priorGradient[i]
 
-            #loops through all previous inputs of 1d vector
-            for j in range(len(self.input2)):
+        #creates the inputGrad
+        for i in range(len(self.input)):
+            #takes the sum of the weightsRow that impacted the inputGrad's effect
+            weightRow = self.weights[:, i]
+            #multiplies together the row each priorGradient that it was related t0
+            tempGrad = np.multiply(weightRow, priorGradient)
+            #takes the sum of the 'i' row impact as the local gradient 
+            #(already multiplied to the prior gradient)
+            inputGrad[i] = np.sum(tempGrad)
 
-                #adds to the weightGrad the priorGradient * 1d value for that element
-                #Creates a weightGrad matrix with all derivatives
-                grad1[i][j] = priorGradient[i] * self.input2[j]
-
-        grad2 = np.zeros(len(self.input2))
-
-        for i in range(len(self.input1[0])):
-            sum = 0
-
-            for j in range(len(self.input1)):
-                sum += self.input1[j][i]
-                sum *= priorGradient[j]
-
-            grad2[i] += sum
-
-        return grad1, grad2
+        return weightGrad, inputGrad
 
 
 
-#ReLU activation function
 class ReLU(Layer):
+    """
+    ReLU acitivation layer
+    Must take in a 1D vector
+    """
 
-    #forces negative values to 0
     def forwardPass(self, input1):
-        
+        """
+        Forces negative values to 0
+        Returns result
+        """
         self.result = np.maximum(0, input1)
-        
         return self.result
 
 
-    #sets not activated values to 0 for the gradient
     def backwardPass(self, priorGradient):
-        
-        #where self.result is 0, grad goes to 0
+        """
+        Sets not-activated values to 0 for the gradient as well.
+        Returns the new gradient.
+        """
+
         #sets return array values to 1, same size as priorGradient
-        multgrad = np.ones(priorGradient.shape)
-        
-        #forces 0 values to 0 for return gradient
-        multgrad *= self.result
+        multGrad = np.ones(priorGradient.shape)
+
+        #if result was 0, set gradient to 0
+        for i in range(len(multGrad)):
+            if(self.result[i] == 0):
+                multGrad[i] = 0
         
         #all values are preserved *1 or forced to 0
         return multgrad * priorGradient
 
 
 
-#Computes a softmax loss.
-#the reference to the math of this function is here:
-#http://cs231n.github.io/linear-classify/#softmax
 class Softmax(Layer):
+    """
+    Computes softmax loss.
+    This class simplifies the full operations of softmax.
+    Reference to the full intution of softmax can be found here: http://cs231n.github.io/linear-classify/#softmax
+    """
 
-    #forwards scores and the correct input through the function
     def forwardPass(self, input1, label):
-
+        """
+        Forwards scores and the correct label through the function
+        to evaluate it's loss
+        """
+        #saves input1 for use in calling scores
+        self.input1 = input1
         #saves label input for backward pass
         self.labelIndex = label
 
@@ -184,128 +245,44 @@ class Softmax(Layer):
         invSum = 1/sumVal
 
         #calculates probScores and saves for back pass
+        #(scores are 0-1 probability based on networks scores)
         self.probScores = exp * invSum
 
-        #computes loss
+        #computes loss (-log is 0 when score is 1, increases as score gets lower)
         self.loss = -math.log(self.probScores[self.labelIndex])
 
 
-    #simplified derived gradient for softmax loss.
-    #the whole function isn't showed in this math.
-    def backwardPass(self, priorGradient = 1.00):
+    def backwardPass(self, priorGradient = None):
+        """
+        Returns the gradient of the loss.
+        There is never a priorGradient to the loss function,
+        so it can be ignored
+        """
+        try:
+            grad = self.probScores
+            grad[self.labelIndex] -= 1
+            return grad
 
-        grad = self.probScores
-        grad[self.labelIndex] -= 1
-            
-        return grad
-
-
-
-###############################################
-#The following methods weren't found to be    #
-#useful for creating networks, but could have #
-#some use to a unique classifier, so they are #
-#left below.                                  #
-###############################################
+        except NameError:
+            print('Cannot backwardPass Softmax w/o a forward pass done first.')
 
 
-#1/x division
-class Division(Layer):
-
-    #stores input1 and returns 1/input1
-    def forwardPass(self, input1):
-        self.input1 = input1
-        return 1/input1
-
-
-    #returns prior gradient times -1/x^2
-    def backwardPass(self, priorGradient):
-        return priorGradient * -1/(self.input1**2)
+    def getLoss(self):
+        """
+        Returns the loss of the network
+        """
+        try:
+            return self.loss
+        except NameError:
+            print('No Loss value has been created.\nNeed to perform a forward pass to get loss')
 
 
+    def getScores(self):
+        """
+        Returns the scores for the network before probScores
+        """
+        return self.input1
 
-#computes max as a sum of the total array
-class Max(Layer):
-
-    #returns whatever array has a greater sum
-    def forwardPass(self, input1, input2):
-        #sums both arrays
-        if(sum(input1) > sum(input2)):
-            self.maxVal = True #these true/false refer to 1/2 input being true. This saves computation in the backwards pass.
-            return input1
-        else:
-            self.maxVal = False
-            return input2
-
-
-    #routes gradient to max value
-    #returns a 0 or the gradient matrix.
-    def backwardPass(self, priorGradient):
-        if(self.maxVal):
-            return priorGradient, 0
-        else:
-            return 0, priorGradient
-
-
-
-#natural log
-class Log(Layer):
-
-    #returns ln(x), stores input 
-    def forwardPass(self, input1):
-        self.input1 = input1
-        return np.log(input1)
-
-    #returns 1/x *grad
-    def backwardPass(self, priorGradient):
-        return priorGradient * 1/self.input1
-
-
-
-#e^x
-class Exp(Layer):
-
-    #exponentiates the input
-    def forwardPass(self, input1):
-        #since derivative is equal to e^x, stores it to save compute
-        self.backwardPass = np.exp(input1)
-        return self.backwardPass
-
-
-    #returns grad * previously computed e^x value
-    def backwardPass(self, priorGradient):
-        return self.backwardPass * priorGradient
-
-
-
-#class for subtractice matrices.
-#not sure if this is ever needed.
-class Subtraction(Layer):
-
-    #first input vector is the first in operation.
-    def forwardPass(self, input1, input2):
-        return input1-input2
-
-
-    #flips the gradient for subtracted element, passes back gradient for first element. 
-    def backwardPass(self, priorGradient):
-        return priorGradient, priorGradient*-1
-
-
-
-#computes a scalar operation
-class Scalar(Layer):
-    
-    #takes a vector input and a scalar float value
-    def forwardPass(self, input1, scalar):
-        #saves scalar for backprop
-        self.scalar = scalar
-        return scalar * input1
-
-
-    #returns scaled vector gradient
-    def backwardPass(self, priorGradient):
-        return self.scalar * priorGradient
     
 
 
