@@ -127,6 +127,27 @@ class Bias(Layer):
         return self.bias
 
 
+class NoBias(Bias):
+    """
+    Layer to be used when no bias is desired
+    """
+
+    def __init__(self):
+        pass
+
+    def forwardPass(self, input):
+        return input
+    
+    def backwardPass(self, grad):
+        return grad
+    
+    def updateGrad(self, grad):
+        pass
+    
+    def getBias(self):
+        return None
+
+
 
 class Multiplication(Layer):
     """
@@ -135,13 +156,13 @@ class Multiplication(Layer):
     input = 1D input vector
     """
 
-    def forwardPass(self, weights, input):
+    def forwardPass(self, weights, inputVector):
         """
         stores weights and input for the backward pass.
-         Returns a dot product between them
+        Returns a dot product between them
         """
         self.weights = weights.getWeights()
-        self.input = input
+        self.input = inputVector
         return np.dot(self.weights, self.input)
 
 
@@ -177,6 +198,9 @@ class Multiplication(Layer):
 
         return weightGrad, inputGrad
 
+    def getWeights(self):
+        return self.weights
+
 
 
 class ReLU(Layer):
@@ -209,7 +233,7 @@ class ReLU(Layer):
                 multGrad[i] = 0
         
         #all values are preserved *1 or forced to 0
-        return multgrad * priorGradient
+        return multGrad * priorGradient
 
 
 

@@ -34,14 +34,13 @@ class Parameters():
         return self.epochs
 
 
-
 class Network():
     """
     Creates the network.
     Pickled after training to run data on it.
     """
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, layers):
         """
         Initializes the class with the given stepSize of the parameters
         The layers are also create here, and must be hardcoded into
@@ -49,16 +48,7 @@ class Network():
         """
         self.stepSize = parameters.getStepSize()
         
-        #init weights, size is (labelNumbers, imagePixels)
-        self.w1 = ly.Weights(10, 784)
-        
-        #init Biases (size of weights output)
-        self.b1 = ly.Bias(10)
-        
-        #init network layers
-        #this is a single layer network w/ no activation function.
-        self.l1 = ly.Multiplication()
-        self.loss = ly.Softmax()
+        self.layers = layers
         
 
     def forwardPass(self, image, labelIndex):
@@ -66,13 +56,18 @@ class Network():
         forwards an image through the network.
         Must be hardcoded in based on the network layers.
         """
-        
-        #layer1 forward pass, happens to be only layer.
-        self.h1 = self.l1.forwardPass(self.w1, image)
-        self.h2 = self.b1.forwardPass(self.h1)
+        #layer = (Weights, Multiplication, Bias, Activation).....(loss)
+        #self.vector = []
+        self.vectors = [np.array(image) / 255]
+        for layer in self.layers[:-1]:
+            outputVector = layer[1].forwardPass(layer[0], self.vectors[-1])
+            if len(layer) > 2:
+                outputVector = layer[2].forwardPass(outputVector)
+            if len(layer) > 3:
+                outputVector = layer[3].forwardPass(outputVector)
+            self.vectors.append(outputVector)
+        self.layers[-1].forwardPass(self.vectors[-1], labelIndex) #loss
 
-        #loss function forward pass.
-        self.loss.forwardPass(self.h2, labelIndex)
 
 
     def backwardPass(self):
@@ -82,12 +77,23 @@ class Network():
         Gradient passes b/w layers must be hardcoded.
         Retruns the gradients of the weights and biases (also hardcoded)
         """
-        
-        grad = self.loss.backwardPass()
-        biasGrad = self.b1.backwardPass(grad)
-        weightGrad, imageGrad = self.l1.backwardPass(biasGrad)
-        
-        return biasGrad, weightGrad
+        grads = []
+
+        localGrad = self.layers[-1].backwardPass() #loss grad, localGrad is priorGrad arg
+
+        for i in range (2, len(self.layers)+1):
+            layerGrad = []
+            layer = self.layers[-i]
+            if len(layer) > 3:
+                localGrad = layer[3].backwardPass(localGrad)
+            if len(layer) > 2:
+                localGrad = layer[2].backwardPass(localGrad)
+                layerGrad.insert(0, localGrad) #bias grad
+            weightGrad, localGrad = layer[1].backwardPass(localGrad) #localGrad for next layer
+            layerGrad.insert(0, weightGrad) #weightGrad
+            grads.insert(0, layerGrad)
+
+        return grads
 
     
     def accuracy(self, image, label):
@@ -98,11 +104,12 @@ class Network():
         """
         
         self.forwardPass(image, label)
+        scores = self.vectors[-1]
         largestValue = 0 #index of largest value starts at 0
        
-        for j in range(1, len(self.h1)):
+        for j in range(1, len(scores)):
             #finds the index of the largest score for all scores
-            if (self.h2[j] > self.h2[largestValue]):
+            if (scores[j] > scores[largestValue]):
                 #if there is a new larger value, updates index
                 largestValue = j
                 
@@ -137,10 +144,16 @@ class Network():
         the entire minibatch.
         """
         
-        #initializes array the same size as weights and biases to store all gradients
-        dW = np.zeros(self.w1.weights.shape)
-        dB = np.zeros(self.b1.bias.shape)
-
+        #creates list for weight gradients
+        dW = []
+        dB = []
+        for layer in self.layers[:-1]:
+            dW.append(np.zeros(layer[1].getWeights().shape))
+            if len(layer) > 2:
+                if (layer[2].getBias().any() != None):
+                    dB.append(np.zeros(layer[2].getBias().shape))
+                else:
+                    dB.append(None)
         #stores number of images being tested
         numData = len(miniBatchImages)
 
@@ -158,20 +171,29 @@ class Network():
             accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
 
             #updates loss
-            loss += self.loss.getLoss()
+            loss += self.layers[-1].getLoss()
 
             #backprops and adds to weights and biases
-            biasGrad, weightGrad = self.backwardPass()
-            dW += weightGrad
-            dB += biasGrad
+            grads = self.backwardPass()
+            for i in range(len(self.layers) - 1):
+                dW[i] += grads[i][0]
+                if(dB[i].any() != None):
+                    dB[i] += grads[i][1]
 
         #avg all gradients of the minibatch
-        dW = dW / numData
-        dB = dB / numData
+        for weight in dW:
+            weight /= numData
+        for bias in dB:
+            if bias.any() != None:
+                bias /= numData
 
         #update weights for minibatch gradients
-        self.w1.updateGrad(self.stepSize, dW, regularization)
-        self.b1.updateGrad(self.stepSize, dB)
+        layerNum = 0
+        for layer in self.layers[:-1]:
+            layer[0].updateGrad(self.stepSize, dW[layerNum], regularization)
+            if layer[2].getBias().any() != None:
+                layer[2].updateGrad(self.stepSize, dB[layerNum])
+            layerNum += 1
 
         #outputs data after training the minibatch
 
@@ -182,14 +204,13 @@ class Network():
         #add values to self lists to be pickled after training is complete.
         self.lossList.append(loss)
         self.accuracyList.append(accuracy)
-        self.weightsList.append(self.w1.weights)
+        self.layersList.append(self.layers)
 
         #prints values to console so training can be seen
         #gives confidence the network isn't dead for the whole
         #train time.
-        print('Loss: ', loss)
+        print('\nLoss: ', loss)
         print('Accuracy: ' , accuracy)
-        print('Weights: ' , self.w1.weights)
 
 
    
@@ -210,21 +231,21 @@ class Network():
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.
         #Should be updated to be randomly ordered and have iterations
-        numMinibatches = int(len(trainImages)/batchSize)
+        numMinibatches = len(trainImages) // batchSize
 
         #creates output lists, updated in trainBatch and pickled
         #after training is completed
         self.lossList = []
         self.accuracyList = []
-        self.weightsList = []
+        self.layersList = []
 
         #opens loss files to output to
         lossFile = open('loss', 'wb')
         accuracyFile = open('accuracy', 'wb')
-        weightsFile = open('weights', 'wb')
+        layersFile = open('layers', 'wb')
 
-        #adds initialized weights to file (so weights before training can be observed)
-        self.weightsList.append(self.w1.weights)
+        #adds initialized layers to file (so layers before training can be observed)
+        self.layersList.append(self.layers)
             
         #loops through data for specified number of times
         for x in range(epochs):
@@ -233,7 +254,7 @@ class Network():
             dataIndex = 0
             
             #trains for the number of minibatches in the whole dataset
-            for i in range(int(len(trainImages)/batchSize)):
+            for i in range(numMinibatches):
 
                 #miniBatch time tracker
                 miniBatchStartTime = time.perf_counter()
@@ -253,17 +274,19 @@ class Network():
                 miniBatchEndTime = time.perf_counter()
                 #ouputs miniBatch time (sanity check while running)
                 print('MiniBatch Time:', miniBatchEndTime - miniBatchStartTime)
+                print('Epochs Remaining:', epochs - x - 1)
+                print('Batches in Current Epoch Remaining:', numMinibatches - i)
 
 
         #outputs data into files for analyzation
         pickle.dump(self.lossList, lossFile)
         pickle.dump(self.accuracyList, accuracyFile)
-        pickle.dump(self.weightsList, weightsFile)
+        pickle.dump(self.layersList, layersFile)
         
         #closes files after data is output
         lossFile.close()
         accuracyFile.close()
-        weightsFile.close()
+        layersFile.close()
 
         #times the networks total train time
         endTime = time.perf_counter()
@@ -272,7 +295,7 @@ class Network():
         print('Train time: ' , endTime - startTime)
 
     def getScores(self):
-        return self.loss.getScores()
+        return self.layers[-1].getScores()
 
 
 
@@ -337,14 +360,14 @@ def displayData():
     plt.show()
 
 
-def trainNetwork(parameters):
+def trainNetwork(parameters, layers):
     """
     Trains the network and pickles it after it is trained.
     Once trained, the network can be run on data without needing to be trained again.
     """
 
     #init network
-    numberNet = Network(parameters)
+    numberNet = Network(parameters, layers)
 
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
@@ -359,7 +382,7 @@ def trainNetwork(parameters):
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
 
     #display output data
-    print('Bias: ', numberNet.b1.getBias())
+    print('Bias: ', numberNet.layers[0][2].getBias())
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
 
@@ -486,10 +509,27 @@ def runNetwork(n):
 
     plt.show()
         
+def createLayer(input, output, biasSize = False, activationFunction = ""):
+    layerList = []
+    layerList.append(ly.Weights(output, input))
+    layerList.append(ly.Multiplication())
+    if (biasSize == False):
+        layerList.append(ly.NoBias())
+    else:
+        layerList.append(ly.Bias(output))
+    if(activationFunction != ""):
+        if activationFunction == 'ReLU':
+            layerList.append(ly.ReLU())
 
+    return layerList
+    
+
+#layer = (Weights, Multiplication, Bias, Activation).....(loss)
+layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
+#layers = [ (ly.Weights(10,784), ly.Multiplication(), ly.Bias(10)), ly.Softmax()]
 #Trains Network
 parameters = Parameters(stepSize = 1e-3, regularization = .4, miniBatchSize= 2500, epochs = 1)
-trainNetwork(parameters)
+trainNetwork(parameters, layers)
 
 #displays the data on the network training
 displayData()
