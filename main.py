@@ -320,7 +320,7 @@ def importData(dir = './mnist'):
         return trainImages, trainLabels, testImages, testLabels
     except FileNotFoundError:
         print('Need to get MNIST data or change directory.')
-    return None
+        return None
 
 
 def displayData():
@@ -400,9 +400,9 @@ def visualizeWeights():
 
     #load weights as weightsList from pickled file
     try:
-        weights = open('weights', 'rb')
-        weightsList = pickle.load(weights)
-        weights.close()
+        layers = open('layers', 'rb')
+        layersList = pickle.load(layers)
+        layers.close()
     except:
         print('Invalid or missing file')
         return None
@@ -412,7 +412,7 @@ def visualizeWeights():
     
     #appends all 10 final weights to the list
     for i in range(10):
-        weights.append(np.array (weightsList[len(weightsList)-1][i]) )
+        weights.append(np.array(layersList[-1][-2][0].getWeights()[i]))
         
     #finds max value to scale images
     #uses absolute values to avoid negatives
@@ -524,11 +524,11 @@ def createLayer(input, output, biasSize = False, activationFunction = ""):
     return layerList
     
 
-#layer = (Weights, Multiplication, Bias, Activation).....(loss)
-layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
-#layers = [ (ly.Weights(10,784), ly.Multiplication(), ly.Bias(10)), ly.Softmax()]
+#layer = (Weights, Multiplication, Bias, Activation),...(loss)
+#layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
+layers = [createLayer(784,100,True), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
 #Trains Network
-parameters = Parameters(stepSize = 1e-3, regularization = .4, miniBatchSize= 2500, epochs = 1)
+parameters = Parameters(stepSize = 1e-3, regularization = .1, miniBatchSize= 2500, epochs = 1)
 trainNetwork(parameters, layers)
 
 #displays the data on the network training
