@@ -14,9 +14,10 @@ class Parameters():
     using only one variable
     """
 
-    def __init__(self, stepSize, regularization, miniBatchSize, epochs):
+    def __init__(self, stepSize, regularization, decay, miniBatchSize, epochs):
         self.stepSize = stepSize
         self.regularization = regularization
+        self.decay = decay
         self.miniBatchSize = miniBatchSize
         self.epochs = epochs
 
@@ -26,6 +27,9 @@ class Parameters():
 
     def getRegularization(self):
         return self.regularization
+    
+    def getDecay(self):
+        return self.decay
 
     def getBatchSize(self):
         return self.miniBatchSize
@@ -137,7 +141,7 @@ class Network():
         return accuracy / len(testImages)
 
 
-    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization):
+    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization, decay):
         """
         trains the network on a single minibatch of data.
         Updates the gradient based on stepsize after computing
@@ -195,6 +199,7 @@ class Network():
                 layer[2].updateGrad(self.stepSize, dB[layerNum])
             layerNum += 1
 
+        self.stepSize -= self.stepSize * decay
         #outputs data after training the minibatch
 
         #average loss and accuracy
@@ -224,6 +229,7 @@ class Network():
         batchSize = parameters.getBatchSize()
         epochs = parameters.getEpochs()
         regularization = parameters.getRegularization()
+        decay = parameters.getDecay()
 
         #times the network train time
         startTime = time.perf_counter()
@@ -268,7 +274,7 @@ class Network():
 
                 #trains the minibatch in the trainBatch method.
                 #data is added to the lists in this method.
-                self.trainBatch(miniBatchImages, miniBatchLabels, regularization)
+                self.trainBatch(miniBatchImages, miniBatchLabels, regularization, decay)
 
                 #miniBatch time tracker
                 miniBatchEndTime = time.perf_counter()
@@ -276,6 +282,8 @@ class Network():
                 print('MiniBatch Time:', miniBatchEndTime - miniBatchStartTime)
                 print('Epochs Remaining:', epochs - x - 1)
                 print('Batches in Current Epoch Remaining:', numMinibatches - i)
+
+            
 
 
         #outputs data into files for analyzation
@@ -525,11 +533,11 @@ def createLayer(input, output, biasSize = False, activationFunction = ""):
     
 
 #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-#layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
-layers = [createLayer(784,100,True), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
+#layers = [createLayer(784, 10, True), ly.Softmax()]
+#layers = [createLayer(784,100,True,'ReLU'), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
 #Trains Network
-parameters = Parameters(stepSize = 1e-3, regularization = .1, miniBatchSize= 2500, epochs = 1)
-trainNetwork(parameters, layers)
+#parameters = Parameters(stepSize = 1e-3, regularization = .4, decay = 0, miniBatchSize= 2500, epochs = 1)
+#trainNetwork(parameters, layers)
 
 #displays the data on the network training
 displayData()
