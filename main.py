@@ -65,7 +65,7 @@ class Network():
         self.vectors = [np.array(image) / 255]
         for layer in self.layers[:-1]:
             outputVector = layer[1].forwardPass(layer[0], self.vectors[-1])
-            if len(layer) > 2:
+            if layer[2] != None:
                 outputVector = layer[2].forwardPass(outputVector)
             if len(layer) > 3:
                 outputVector = layer[3].forwardPass(outputVector)
@@ -90,7 +90,7 @@ class Network():
             layer = self.layers[-i]
             if len(layer) > 3:
                 localGrad = layer[3].backwardPass(localGrad)
-            if len(layer) > 2:
+            if layer[2] != None:
                 localGrad = layer[2].backwardPass(localGrad)
                 layerGrad.insert(0, localGrad) #bias grad
             weightGrad, localGrad = layer[1].backwardPass(localGrad) #localGrad for next layer
@@ -141,7 +141,7 @@ class Network():
         return accuracy / len(testImages)
 
 
-    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization, decay):
+    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization):
         """
         trains the network on a single minibatch of data.
         Updates the gradient based on stepsize after computing
@@ -153,11 +153,10 @@ class Network():
         dB = []
         for layer in self.layers[:-1]:
             dW.append(np.zeros(layer[1].getWeights().shape))
-            if len(layer) > 2:
-                if (layer[2].getBias().any() != None):
-                    dB.append(np.zeros(layer[2].getBias().shape))
-                else:
-                    dB.append(None)
+            if (layer[2] != None):
+                dB.append(np.zeros(layer[2].getBias().shape))
+            else:
+                dB.append(None)
         #stores number of images being tested
         numData = len(miniBatchImages)
 
@@ -195,11 +194,10 @@ class Network():
         layerNum = 0
         for layer in self.layers[:-1]:
             layer[0].updateGrad(self.stepSize, dW[layerNum], regularization)
-            if layer[2].getBias().any() != None:
+            if layer[2] != None:
                 layer[2].updateGrad(self.stepSize, dB[layerNum])
             layerNum += 1
 
-        self.stepSize -= self.stepSize * decay
         #outputs data after training the minibatch
 
         #average loss and accuracy
@@ -274,7 +272,9 @@ class Network():
 
                 #trains the minibatch in the trainBatch method.
                 #data is added to the lists in this method.
-                self.trainBatch(miniBatchImages, miniBatchLabels, regularization, decay)
+                self.trainBatch(miniBatchImages, miniBatchLabels, regularization)
+
+                self.stepSize = self.stepSize - self.stepSize*decay
 
                 #miniBatch time tracker
                 miniBatchEndTime = time.perf_counter()
@@ -390,7 +390,6 @@ def trainNetwork(parameters, layers):
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
 
     #display output data
-    print('Bias: ', numberNet.layers[0][2].getBias())
     print('initAccuracy: ', initialAccuracy)
     print('finalAccuracy: ', finalAccuracy)
 
@@ -517,12 +516,12 @@ def runNetwork(n):
 
     plt.show()
         
-def createLayer(input, output, biasSize = False, activationFunction = ""):
+def createLayer(input, output, bias = False, activationFunction = ""):
     layerList = []
     layerList.append(ly.Weights(output, input))
     layerList.append(ly.Multiplication())
-    if (biasSize == False):
-        layerList.append(ly.NoBias())
+    if (bias == False):
+        layerList.append(None)
     else:
         layerList.append(ly.Bias(output))
     if(activationFunction != ""):
@@ -530,15 +529,17 @@ def createLayer(input, output, biasSize = False, activationFunction = ""):
             layerList.append(ly.ReLU())
         elif activationFunction == 'Sigmoid':
             layerList.append(ly.Sigmoid())
+        elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
+            layerList.append(ly.LeakyReLU())
 
     return layerList
     
 
 #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-layers = [createLayer(784, 10, True, 'Sigmoid'), ly.Softmax()]
+layers = [createLayer(784, 10, True, 'HipsterReLU'), ly.Softmax()]
 #layers = [createLayer(784,100,True,'ReLU'), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
 #Trains Network
-parameters = Parameters(stepSize = 1e-3, regularization = .2, decay = 0, miniBatchSize= 2500, epochs = 3)
+parameters = Parameters(stepSize = 1e-5, regularization = .2, decay = 0, miniBatchSize= 2500, epochs = 10)
 trainNetwork(parameters, layers)
 
 #displays the data on the network training
