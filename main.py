@@ -329,12 +329,12 @@ def importData(dir = './mnist'):
     except FileNotFoundError:
         print('Need to get MNIST data or change directory.')
         return None
+    return None
 
 
 def displayData():
     """
-    Displays the data (besided weights) that wasn't logged during training.
-    Shows accuracy and loss.
+    Displays accuracy and loss data.
     """
 
     #opens pickled log files created during training
