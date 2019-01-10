@@ -528,16 +528,18 @@ def createLayer(input, output, biasSize = False, activationFunction = ""):
     if(activationFunction != ""):
         if activationFunction == 'ReLU':
             layerList.append(ly.ReLU())
+        elif activationFunction == 'Sigmoid':
+            layerList.append(ly.Sigmoid())
 
     return layerList
     
 
 #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-#layers = [createLayer(784, 10, True), ly.Softmax()]
+layers = [createLayer(784, 10, True, 'Sigmoid'), ly.Softmax()]
 #layers = [createLayer(784,100,True,'ReLU'), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
 #Trains Network
-#parameters = Parameters(stepSize = 1e-3, regularization = .4, decay = 0, miniBatchSize= 2500, epochs = 1)
-#trainNetwork(parameters, layers)
+parameters = Parameters(stepSize = 1e-3, regularization = .2, decay = 0, miniBatchSize= 2500, epochs = 3)
+trainNetwork(parameters, layers)
 
 #displays the data on the network training
 displayData()

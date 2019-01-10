@@ -237,6 +237,20 @@ class ReLU(Layer):
 
 
 
+class Sigmoid(Layer):
+    """
+    1/(1+ e^-x) activation function
+    """
+    def forwardPass(self, input1):
+        self.input1 = input1
+        result = 1 / (1 + np.exp(-input1))
+        return result
+
+    def backwardPass(self, priorGradient):
+        localGrad = 1 / (2 + np.exp(self.input1) + np.exp(-self.input1))
+        return localGrad * priorGradient
+
+
 class Softmax(Layer):
     """
     Computes softmax loss.
