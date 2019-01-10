@@ -127,25 +127,26 @@ class Bias(Layer):
         return self.bias
 
 
-class NoBias(Bias):
-    """
-    Layer to be used when no bias is desired
-    """
 
-    def __init__(self):
-        pass
+#class NoBias(Bias):
+#    """
+#    Layer to be used when no bias is desired
+#    """
 
-    def forwardPass(self, input):
-        return input
+#    def __init__(self):
+#        pass
+
+#    def forwardPass(self, input):
+#        return input
     
-    def backwardPass(self, grad):
-        return grad
+#    def backwardPass(self, grad):
+#        return grad
     
-    def updateGrad(self, grad):
-        pass
+#    def updateGrad(self, grad):
+#        pass
     
-    def getBias(self):
-        return None
+#    def getBias(self):
+#        return None
 
 
 
@@ -237,6 +238,26 @@ class ReLU(Layer):
 
 
 
+class LeakyReLU(Layer):
+
+    def forwardPass(self, input1):
+        self.input1 = input1
+        result = input1
+        for i in range(len(result)):
+            if result[i] < 0:
+                result[i] *= .1
+        return result
+        
+
+    def backwardPass(self, priorGradient):
+        grad = priorGradient
+        for i in range(len(priorGradient)):
+            if(self.input1[i] < 0):
+                grad[i] *= .1
+        return grad
+
+
+
 class Sigmoid(Layer):
     """
     1/(1+ e^-x) activation function
@@ -249,6 +270,7 @@ class Sigmoid(Layer):
     def backwardPass(self, priorGradient):
         localGrad = 1 / (2 + np.exp(self.input1) + np.exp(-self.input1))
         return localGrad * priorGradient
+
 
 
 class Softmax(Layer):
@@ -321,6 +343,44 @@ class Softmax(Layer):
         """
         return self.input1
 
-    
 
 
+def main():
+    def ReLUTest():
+        relu = ReLU()
+        input = np.array([-1,3,4,0,-.1,-10])
+        print(relu.forwardPass(input))
+        grad = np.array([x for x in range(len(input))])
+        print(relu.backwardPass(grad))
+
+    def leakyReLUTest():
+        relu = LeakyReLU()
+        input = np.array([-1,3,4,0,-.1,-10])
+        print(relu.forwardPass(input))
+        grad = np.array([float(x) for x in range(len(input))])
+        print(relu.backwardPass(grad))
+
+    def multTest():
+        mult = Multiplication()
+        weights = Weights(2,2)
+        weights.weights[0][0] = .1
+        weights.weights[0][1] = .5
+        weights.weights[1][0] = -.3
+        weights.weights[1][1] = .8
+        print(weights.getWeights())
+        input = np.array([.2,.4])
+
+        print(mult.forwardPass(weights,input))
+        print(mult.backwardPass(np.array([.44,.52])))
+
+    print('Multiplication Layer Test:')
+    multTest()
+
+    print('ReLU Test:')
+    ReLUTest()
+
+    print('Leaky ReLU Test:')
+    leakyReLUTest()
+
+if __name__ == '__main__':
+    main()
