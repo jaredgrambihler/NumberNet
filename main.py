@@ -536,10 +536,10 @@ def createLayer(input, output, bias = False, activationFunction = ""):
     
 
 #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-layers = [createLayer(784, 10, True, 'HipsterReLU'), ly.Softmax()]
-#layers = [createLayer(784,100,True,'ReLU'), createLayer(100,100,True), createLayer(100,10,True), ly.Softmax()]
+#layers = [createLayer(784, 10, True, 'HipsterReLU'), ly.Softmax()]
+layers = [createLayer(784,512,True,'ReLU'), createLayer(512,10,True), ly.Softmax()]
 #Trains Network
-parameters = Parameters(stepSize = 1e-5, regularization = .2, decay = 0, miniBatchSize= 2500, epochs = 10)
+parameters = Parameters(stepSize = 1e-5, regularization = .1, decay = 0, miniBatchSize= 2500, epochs = 10)
 trainNetwork(parameters, layers)
 
 #displays the data on the network training
