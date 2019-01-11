@@ -62,15 +62,24 @@ class Weights:
         self.weights = np.random.randn(x*y) * math.sqrt(2.0/y)
         self.weights = np.reshape(self.weights, (x,y))
 
+        #learning params
+        self.vdw = np.zeros((x,y))
+        self.sdw = np.zeros((x,y))
+
 
     def updateGrad(self, stepSize, grad, regularization):
         """
         Updates the weights based on gradient, stepSize, and Regularization.
         Should be called after the avg gradient is computed for a minibatch
         """
+        b1 = .9
+        b2 = .99
 
+        self.vdw = b1 * self.vdw + (1-b1) * grad
+        self.sdw = b2 * self.sdw + (1-b2) * grad**2
+        #needs to add correction
         #performs update
-        self.weights -= grad * stepSize
+        self.weights -= stepSize * self.vdw / (self.sdw)**1/2
 
         #regularization function of L2 Regularization
         #Reference : http://cs231n.github.io/neural-networks-2/
@@ -95,6 +104,9 @@ class Bias(Layer):
         Creates biases of length 'n' to all be zero
         """
         self.bias = np.zeros(x)
+        self.vdb = np.zeros(x)
+        self.sdb = np.zeros(x)
+
 
 
     def forwardPass(self, input1):
@@ -118,8 +130,16 @@ class Bias(Layer):
         Performs an update to the biases.
         Should be done after the avg is computes from a minibatch
         """
-        self.bias -= stepSize * grad
+        b1 = .9
+        b2 = .99
 
+        self.vdb = b1 * self.vdb + (1-b1) * grad
+        self.sdb = b2 * self.sdb + (1-b2) * grad**2
+        #needs to add correction
+        #performs update
+        self.bias -= stepSize * self.vdb / (self.sdb)**1/2
+
+        
     def getBias(self):
         """
         Returns the biases

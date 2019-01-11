@@ -141,7 +141,7 @@ class Network():
         return accuracy / len(testImages)
 
 
-    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization):
+    def trainBatch(self, miniBatchImages, miniBatchLabels, regularization, decay, epoch):
         """
         trains the network on a single minibatch of data.
         Updates the gradient based on stepsize after computing
@@ -192,10 +192,11 @@ class Network():
 
         #update weights for minibatch gradients
         layerNum = 0
+        stepSize = 1/(1 + decay * epoch) * self.stepSize
         for layer in self.layers[:-1]:
-            layer[0].updateGrad(self.stepSize, dW[layerNum], regularization)
+            layer[0].updateGrad(stepSize, dW[layerNum], regularization)
             if layer[2] != None:
-                layer[2].updateGrad(self.stepSize, dB[layerNum])
+                layer[2].updateGrad(stepSize, dB[layerNum])
             layerNum += 1
 
         #outputs data after training the minibatch
@@ -272,7 +273,8 @@ class Network():
 
                 #trains the minibatch in the trainBatch method.
                 #data is added to the lists in this method.
-                self.trainBatch(miniBatchImages, miniBatchLabels, regularization)
+                epoch = x
+                self.trainBatch(miniBatchImages, miniBatchLabels, regularization, decay, epoch)
 
                 self.stepSize = self.stepSize - self.stepSize*decay
 
@@ -536,10 +538,10 @@ def createLayer(input, output, bias = False, activationFunction = ""):
     
 
 #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-#layers = [createLayer(784, 10, True, 'HipsterReLU'), ly.Softmax()]
-layers = [createLayer(784,512,True,'ReLU'), createLayer(512,10,True), ly.Softmax()]
+layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
+#layers = [createLayer(784,512,True,'ReLU'), createLayer(512,10,True), ly.Softmax()]
 #Trains Network
-parameters = Parameters(stepSize = 1e-5, regularization = .1, decay = 0, miniBatchSize= 2500, epochs = 10)
+parameters = Parameters(stepSize = 1e-3, regularization = .4, decay = .5, miniBatchSize= 2500, epochs = 1)
 trainNetwork(parameters, layers)
 
 #displays the data on the network training
