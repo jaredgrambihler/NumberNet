@@ -15,27 +15,27 @@ class Parameters():
     """
 
     def __init__(self, stepSize, regularization, decay, miniBatchSize, epochs):
-        self.stepSize = stepSize
-        self.regularization = regularization
-        self.decay = decay
-        self.miniBatchSize = miniBatchSize
-        self.epochs = epochs
+        self._stepSize = stepSize
+        self._regularization = regularization
+        self._decay = decay
+        self._miniBatchSize = miniBatchSize
+        self._epochs = epochs
 
     #getters for the class
-    def getStepSize(self):
-        return self.stepSize
+    def stepSize(self):
+        return self._stepSize
 
-    def getRegularization(self):
-        return self.regularization
+    def regularization(self):
+        return self._regularization
     
-    def getDecay(self):
-        return self.decay
+    def decay(self):
+        return self._decay
 
-    def getBatchSize(self):
-        return self.miniBatchSize
+    def batchSize(self):
+        return self._miniBatchSize
 
-    def getEpochs(self):
-        return self.epochs
+    def epochs(self):
+        return self._epochs
 
 
 class Network():
@@ -50,9 +50,13 @@ class Network():
         The layers are also create here, and must be hardcoded into
         the network.
         """
-        self.stepSize = parameters.getStepSize()
-        
+        self.parameters = parameters
         self.layers = layers
+
+        #creates output lists, updated in trainBatch and pickled
+        #after training is completed
+        self.lossList = []
+        self.accuracyList = []
         
 
     def forwardPass(self, image, labelIndex):
@@ -71,7 +75,6 @@ class Network():
                 outputVector = layer[3].forwardPass(outputVector)
             self.vectors.append(outputVector)
         self.layers[-1].forwardPass(self.vectors[-1], labelIndex) #loss
-
 
 
     def backwardPass(self):
@@ -152,9 +155,9 @@ class Network():
         dW = []
         dB = []
         for layer in self.layers[:-1]:
-            dW.append(np.zeros(layer[1].getWeights().shape))
+            dW.append(np.zeros(layer[1].weights.shape))
             if (layer[2] != None):
-                dB.append(np.zeros(layer[2].getBias().shape))
+                dB.append(np.zeros(layer[2].bias.shape))
             else:
                 dB.append(None)
         #stores number of images being tested
@@ -174,7 +177,7 @@ class Network():
             accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
 
             #updates loss
-            loss += self.layers[-1].getLoss()
+            loss += self.layers[-1].loss
 
             #backprops and adds to weights and biases
             grads = self.backwardPass()
@@ -192,7 +195,7 @@ class Network():
 
         #update weights for minibatch gradients
         layerNum = 0
-        stepSize = 1/(1 + decay * epoch) * self.stepSize
+        stepSize = 1/(1 + decay * epoch) * self.parameters.stepSize()
         for layer in self.layers[:-1]:
             layer[0].updateGrad(stepSize, dW[layerNum], regularization)
             if layer[2] != None:
@@ -208,13 +211,12 @@ class Network():
         #add values to self lists to be pickled after training is complete.
         self.lossList.append(loss)
         self.accuracyList.append(accuracy)
-        self.layersList.append(self.layers)
 
         #prints values to console so training can be seen
         #gives confidence the network isn't dead for the whole
         #train time.
         print('\nLoss: ', loss)
-        print('Accuracy: ' , accuracy)
+        print('Batch Accuracy: ' , accuracy)
 
 
    
@@ -225,10 +227,10 @@ class Network():
         After this method is run the network is ready for use.
         """
         #gets the paremeters to be used
-        batchSize = parameters.getBatchSize()
-        epochs = parameters.getEpochs()
-        regularization = parameters.getRegularization()
-        decay = parameters.getDecay()
+        batchSize = parameters.batchSize()
+        epochs = parameters.epochs()
+        regularization = parameters.regularization()
+        decay = parameters.decay()
 
         #times the network train time
         startTime = time.perf_counter()
@@ -238,20 +240,10 @@ class Network():
         #Should be updated to be randomly ordered and have iterations
         numMinibatches = len(trainImages) // batchSize
 
-        #creates output lists, updated in trainBatch and pickled
-        #after training is completed
-        self.lossList = []
-        self.accuracyList = []
-        self.layersList = []
-
         #opens loss files to output to
         lossFile = open('loss', 'wb')
         accuracyFile = open('accuracy', 'wb')
-        layersFile = open('layers', 'wb')
 
-        #adds initialized layers to file (so layers before training can be observed)
-        self.layersList.append(self.layers)
-            
         #loops through data for specified number of times
         for x in range(epochs):
             
@@ -265,8 +257,16 @@ class Network():
                 miniBatchStartTime = time.perf_counter()
 
                 #slices train images and labels
-                miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
-                miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
+                #miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
+                #miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
+
+                trainOrder = np.random.choice(len(trainImages), len(trainImages), replace = False) #returns a randomly ordered list of all indexes
+                batchImages = []
+                batchLabels = []
+                batchIndex = trainOrder[dataIndex : dataIndex + batchSize]
+                for index in batchIndex:
+                    batchImages.append(trainImages[index])
+                    batchLabels.append(trainLabels[index])
 
                 #updates dataIndex
                 dataIndex += batchSize
@@ -274,9 +274,7 @@ class Network():
                 #trains the minibatch in the trainBatch method.
                 #data is added to the lists in this method.
                 epoch = x
-                self.trainBatch(miniBatchImages, miniBatchLabels, regularization, decay, epoch)
-
-                self.stepSize = self.stepSize - self.stepSize*decay
+                self.trainBatch(batchImages, batchLabels, regularization, decay, epoch)
 
                 #miniBatch time tracker
                 miniBatchEndTime = time.perf_counter()
@@ -291,12 +289,10 @@ class Network():
         #outputs data into files for analyzation
         pickle.dump(self.lossList, lossFile)
         pickle.dump(self.accuracyList, accuracyFile)
-        pickle.dump(self.layersList, layersFile)
         
         #closes files after data is output
         lossFile.close()
         accuracyFile.close()
-        layersFile.close()
 
         #times the networks total train time
         endTime = time.perf_counter()
@@ -304,8 +300,124 @@ class Network():
         #outputs the train time to console
         print('Train time: ' , endTime - startTime)
 
-    def getScores(self):
-        return self.layers[-1].getScores()
+
+    def displayData(self):
+        """
+        Displays accuracy and loss data.
+        """
+
+        #creates a matplotlib figure w/ 2 graphs for loss, accuracy
+        fig, (lossPlot, accuracyPlot) = plt.subplots(1,2)
+
+        #plots loss and accuracy
+        lossPlot.plot(self.lossList)
+        accuracyPlot.plot(self.accuracyList)
+
+        #shows plot
+        plt.show()
+
+
+    def visualizeWeights(self):
+        """
+        Vizualizes the weights in the network.
+        Hard Coded so will only work with a known layer of weights.
+        """
+
+        #makes a list of np arrays for all weights
+        weights = []
+    
+        #appends all 10 final weights to the list
+        for i in range(10):
+            weights.append(np.array(self.layers[0][0].weights[i]))
+        
+        #finds max value to scale images
+        #uses absolute values to avoid negatives
+        maxPixel = np.amax(np.abs(weights))
+
+        #scales array to 255.0 pixel values
+        scalar = 255.0 / maxPixel
+    
+        for i in range(len(weights)):
+            #scales weights to 255.0 values
+            weights[i] *= scalar
+            #reshapes the weights to be a 28x28 image
+            weights[i] = np.reshape(weights[i], (28,28))
+
+        #creates a plot for all weights
+        fig = plt.figure()
+    
+        ax1 = fig.add_subplot(251)
+        ax1.imshow(weights[1], cmap = 'gray')
+        ax2 = fig.add_subplot(252)
+        ax2.imshow(weights[2], cmap = 'gray')
+        ax3 = fig.add_subplot(253)
+        ax3.imshow(weights[3], cmap = 'gray')
+        ax4 = fig.add_subplot(254)
+        ax4.imshow(weights[4], cmap = 'gray')
+        ax5 = fig.add_subplot(255)
+        ax5.imshow(weights[5], cmap = 'gray')
+        ax6 = fig.add_subplot(256)
+        ax6.imshow(weights[6], cmap = 'gray')
+        ax7 = fig.add_subplot(257)
+        ax7.imshow(weights[7], cmap = 'gray')
+        ax8 = fig.add_subplot(258)
+        ax8.imshow(weights[8], cmap = 'gray')
+        ax9 = fig.add_subplot(259)
+        ax9.imshow(weights[9], cmap = 'gray')
+        ax0 = fig.add_subplot(2,5,10)
+        ax0.imshow(weights[0], cmap = 'gray')
+        
+        #shows weights
+        plt.show()
+
+
+    def run(self, images, labels, delay = 2):
+        """
+        Runs the network to vizualize the data.
+        Diplays a new image every n seconds
+        Displays the image it is recognizing and the networks guess,
+        as well as the correct answer.
+        """
+    
+        #import data
+        trainImages, trainLabels, testImages, testLabels = importData()
+
+        #creates a matplotlib figure to show images
+        fig = plt.figure()
+        ax1 = fig.add_subplot(1,1,1)
+
+        #defines animate for matplotlib function
+        def animate(i):
+
+            #uses the 'i'th image of test data
+            image = np.array(images[i])
+            #reshapes image to 28x28 to be displayed
+            image = np.reshape(image, (28,28))
+
+            #runs a forwardPass, the trainLabel is needed for computing the loss (in forward pass method)
+            #if the network is intened to be run w/o known labels, could put any number in for the test label
+            #and it would still give an unaffected guess.
+            self.forwardPass(images[i], labels[i])
+
+            #gets scores from network and picks the max index as the number guess
+            scores = np.array(self.scores())
+            maxScoreIndex = np.argmax(scores)
+
+            #creates a title for the image showing the guess and true value
+            title = 'Network Guess: ' + str(maxScoreIndex) + ' Actual: ' + str(labels[i])
+
+            #plots the image
+            ax1.clear()
+            ax1.set_title(title)
+            ax1.imshow(image, cmap = 'gray')
+
+        #creates the matplotlib animation, shows a new image every n seconds
+        ani = animation.FuncAnimation(fig, animate, interval = delay*1000)
+
+        plt.show()
+
+    def scores(self):
+        return self.layers[-1].scores()
 
 
 
@@ -333,48 +445,37 @@ def importData(dir = './mnist'):
         return None
     return None
 
+        
+def createLayer(input, output, bias = False, activationFunction = ""):
+    layerList = []
+    layerList.append(ly.Weights(output, input))
+    layerList.append(ly.Multiplication())
+    if (bias == False):
+        layerList.append(None)
+    else:
+        layerList.append(ly.Bias(output))
+    if(activationFunction != ""):
+        if activationFunction == 'ReLU':
+            layerList.append(ly.ReLU())
+        elif activationFunction == 'Sigmoid':
+            layerList.append(ly.Sigmoid())
+        elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
+            layerList.append(ly.LeakyReLU())
 
-def displayData():
-    """
-    Displays accuracy and loss data.
-    """
+    return layerList
+    
 
-    #opens pickled log files created during training
-    try:
-        accuracy = open('accuracy', 'rb')
-        loss = open('loss', 'rb')
-    except FileNotFoundError:
-        print('Log files don\'t exist')
-        return None
-
-    #recreates the pickled objects
-    try:
-        accuracyList = pickle.load(accuracy)
-        lossList = pickle.load(loss)
-    except:
-        print('Invalid log files.')
-        return None
-
-    #closes pickle files once objects have been created.
-    accuracy.close()
-    loss.close()
-
-    #creates a matplotlib figure w/ 2 graphs for loss, accuracy
-    fig, (lossPlot, accuracyPlot) = plt.subplots(1,2)
-
-    #plots loss and accuracy
-    lossPlot.plot(lossList)
-    accuracyPlot.plot(accuracyList)
-
-    #shows plot
-    plt.show()
-
-
-def trainNetwork(parameters, layers):
+def main():
     """
     Trains the network and pickles it after it is trained.
     Once trained, the network can be run on data without needing to be trained again.
     """
+
+    #layer = (Weights, Multiplication, Bias, Activation),...(loss)
+    #layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
+
+    layers = [createLayer(784,512,True,'ReLU'), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True, 'ReLU'), ly.Softmax()]
+    parameters = Parameters(stepSize = 1e-3, regularization = .2, decay = .9, miniBatchSize= 256, epochs = 2)
 
     #init network
     numberNet = Network(parameters, layers)
@@ -401,154 +502,16 @@ def trainNetwork(parameters, layers):
     networkFile.close()
 
 
-def visualizeWeights():
-    """
-    Vizualizes the weights in the network.
-    Hard Coded so will only work with a known layer of weights.
-    """
+def showData():
+    networkFile = open('network', 'rb')
+    network = pickle.load(networkFile)
 
-    #load weights as weightsList from pickled file
-    try:
-        layers = open('layers', 'rb')
-        layersList = pickle.load(layers)
-        layers.close()
-    except:
-        print('Invalid or missing file')
-        return None
+    network.displayData()
 
-    #makes a list of np arrays for all weights
-    weights = []
+    network.visualizeWeights()
     
-    #appends all 10 final weights to the list
-    for i in range(10):
-        weights.append(np.array(layersList[-1][-2][0].getWeights()[i]))
-        
-    #finds max value to scale images
-    #uses absolute values to avoid negatives
-    maxPixel = np.amax(np.abs(weights))
-
-    #scales array to 255.0 pixel values
-    scalar = 255.0 / maxPixel
-    
-    for i in range(len(weights)):
-        #scales weights to 255.0 values
-        weights[i] *= scalar
-        #reshapes the weights to be a 28x28 image
-        weights[i] = np.reshape(weights[i], (28,28))
-
-    #creates a plot for all weights
-    fig = plt.figure()
-    
-    ax1 = fig.add_subplot(251)
-    ax1.imshow(weights[1], cmap = 'gray')
-    ax2 = fig.add_subplot(252)
-    ax2.imshow(weights[2], cmap = 'gray')
-    ax3 = fig.add_subplot(253)
-    ax3.imshow(weights[3], cmap = 'gray')
-    ax4 = fig.add_subplot(254)
-    ax4.imshow(weights[4], cmap = 'gray')
-    ax5 = fig.add_subplot(255)
-    ax5.imshow(weights[5], cmap = 'gray')
-    ax6 = fig.add_subplot(256)
-    ax6.imshow(weights[6], cmap = 'gray')
-    ax7 = fig.add_subplot(257)
-    ax7.imshow(weights[7], cmap = 'gray')
-    ax8 = fig.add_subplot(258)
-    ax8.imshow(weights[8], cmap = 'gray')
-    ax9 = fig.add_subplot(259)
-    ax9.imshow(weights[9], cmap = 'gray')
-    ax0 = fig.add_subplot(2,5,10)
-    ax0.imshow(weights[0], cmap = 'gray')
-        
-    #shows weights
-    plt.show()
-
-
-def runNetwork(n):
-    """
-    Runs the network to vizualize the data.
-    Diplays a new image every n seconds
-    Displays the image it is recognizing and the networks guess,
-    as well as the correct answer.
-    """
-    
-    #import data
     trainImages, trainLabels, testImages, testLabels = importData()
+    network.run(testImages, testLabels, delay = 2)
 
-    #opens network as 'network'
-    try:
-        networkFile = open('network', 'rb')
-        network = pickle.load(networkFile)
-        networkFile.close()
-    except:
-        print('Cannot open or load network file.')
-        return None
-
-    #creates a matplotlib figure to show images
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1,1,1)
-
-    #defines animate for matplotlib function
-    def animate(i):
-
-        #uses the 'i'th image of test data
-        image = np.array(testImages[i])
-        #reshapes image to 28x28 to be displayed
-        image = np.reshape(image, (28,28))
-
-        #runs a forwardPass, the trainLabel is needed for computing the loss (in forward pass method)
-        #if the network is intened to be run w/o known labels, could put any number in for the test label
-        #and it would still give an unaffected guess.
-        network.forwardPass(testImages[i], testLabels[i])
-
-        #gets scores from network and picks the max index as the number guess
-        scores = np.array(network.getScores())
-        maxScoreIndex = np.argmax(scores)
-
-        #creates a title for the image showing the guess and true value
-        title = 'Network Guess: ' + str(maxScoreIndex) + ' Actual: ' + str(testLabels[i])
-
-        #plots the image
-        ax1.clear()
-        ax1.set_title(title)
-        ax1.imshow(image, cmap = 'gray')
-
-    #creates the matplotlib animation, shows a new image every n seconds
-    ani = animation.FuncAnimation(fig, animate, interval = n*1000)
-
-    plt.show()
-        
-def createLayer(input, output, bias = False, activationFunction = ""):
-    layerList = []
-    layerList.append(ly.Weights(output, input))
-    layerList.append(ly.Multiplication())
-    if (bias == False):
-        layerList.append(None)
-    else:
-        layerList.append(ly.Bias(output))
-    if(activationFunction != ""):
-        if activationFunction == 'ReLU':
-            layerList.append(ly.ReLU())
-        elif activationFunction == 'Sigmoid':
-            layerList.append(ly.Sigmoid())
-        elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
-            layerList.append(ly.LeakyReLU())
-
-    return layerList
-    
-
-#layer = (Weights, Multiplication, Bias, Activation),...(loss)
-layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
-#layers = [createLayer(784,512,True,'ReLU'), createLayer(512,10,True), ly.Softmax()]
-#Trains Network
-parameters = Parameters(stepSize = 1e-3, regularization = .4, decay = .5, miniBatchSize= 2500, epochs = 1)
-trainNetwork(parameters, layers)
-
-#displays the data on the network training
-displayData()
-
-#vizualizes the netowrks weights
-visualizeWeights()
-
-#runs the network visually
-runNetwork(2)
+main()
+showData()

@@ -74,12 +74,14 @@ class Weights:
         """
         b1 = .9
         b2 = .99
+        epsilon = 10e-8
 
         self.vdw = b1 * self.vdw + (1-b1) * grad
         self.sdw = b2 * self.sdw + (1-b2) * grad**2
         #needs to add correction
         #performs update
-        self.weights -= stepSize * self.vdw / (self.sdw)**1/2
+        self.weights -= stepSize * self.vdw / ((self.sdw)**1/2 + epsilon)
+        #self.weights -= stepSize * grad
 
         #regularization function of L2 Regularization
         #Reference : http://cs231n.github.io/neural-networks-2/
@@ -132,12 +134,14 @@ class Bias(Layer):
         """
         b1 = .9
         b2 = .99
+        epsilon = 10e-8
 
         self.vdb = b1 * self.vdb + (1-b1) * grad
         self.sdb = b2 * self.sdb + (1-b2) * grad**2
         #needs to add correction
         #performs update
-        self.bias -= stepSize * self.vdb / (self.sdb)**1/2
+        self.bias -= stepSize * self.vdb / ((self.sdb)**1/2 + epsilon)
+        #self.bias -= stepSize * grad
 
         
     def getBias(self):
@@ -307,6 +311,8 @@ class Softmax(Layer):
         """
         #saves input1 for use in calling scores
         self.input1 = input1
+
+        self.scores = input1 #for access, should be fixed later
         #saves label input for backward pass
         self.labelIndex = label
 
@@ -314,6 +320,8 @@ class Softmax(Layer):
         #Also tries not to shrink them so low they vanish to 0 and
         #cannot be logged.
         maxVal = np.max(input1)
+        if(maxVal == 0): #prevents divide by zero error
+            maxVal = 1/744
         expNum = input1 / (maxVal * 744)
 
         #exponentiates safe values
@@ -357,13 +365,6 @@ class Softmax(Layer):
             print('No Loss value has been created.\nNeed to perform a forward pass to get loss')
 
 
-    def getScores(self):
-        """
-        Returns the scores for the network before probScores
-        """
-        return self.input1
-
-
 
 def main():
     def ReLUTest():
@@ -402,5 +403,5 @@ def main():
     print('Leaky ReLU Test:')
     leakyReLUTest()
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
