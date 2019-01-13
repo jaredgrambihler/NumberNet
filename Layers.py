@@ -59,39 +59,41 @@ class Weights:
         y = number of inputs
         """
         #guassian distribution w/ sd of sqrt(2/inputs)
-        self.weights = np.random.randn(x*y) * math.sqrt(2.0/y)
-        self.weights = np.reshape(self.weights, (x,y))
+        self._weights = np.random.randn(x*y) * math.sqrt(2.0/y)
+        self._weights = np.reshape(self._weights, (x,y))
 
         #learning params
         self.vdw = np.zeros((x,y))
         self.sdw = np.zeros((x,y))
 
 
-    def updateGrad(self, stepSize, grad, regularization):
+    def updateGrad(self, grad, parameters):
         """
         Updates the weights based on gradient, stepSize, and Regularization.
         Should be called after the avg gradient is computed for a minibatch
         """
-        b1 = .9
-        b2 = .99
-        epsilon = 10e-8
 
-        self.vdw = b1 * self.vdw + (1-b1) * grad
-        self.sdw = b2 * self.sdw + (1-b2) * grad**2
-        #needs to add correction
-        #performs update
-        self.weights -= stepSize * self.vdw / ((self.sdw)**1/2 + epsilon)
-        #self.weights -= stepSize * grad
+        #momentum and RMSProp implemented w/o correction
+        if parameters.momentum == True:
+            self.vdw = parameters.beta1 * self.vdw + (1- parameters.beta1) * grad
+            self._weights -= parameters.stepSize * self.vdw
+        else:
+            self._weights -= parameters.stepSize * grad
+
+        if parameters.RMSProp == True:
+            self.sdw = parameters.beta2 * self.sdw + (1 - parameters.beta2) * grad**2
+            self._weights /= (self.sdw + parameters.epsilon)**.5
 
         #regularization function of L2 Regularization
         #Reference : http://cs231n.github.io/neural-networks-2/
-        self.weights -= regularization * self.weights
+        self._weights -= parameters.regularization * self.weights
 
-    def getWeights(self):
+    @property
+    def weights(self):
         """
         Returns the weights
         """
-        return self.weights
+        return self._weights
 
 
 
@@ -105,7 +107,7 @@ class Bias(Layer):
         """
         Creates biases of length 'n' to all be zero
         """
-        self.bias = np.zeros(x)
+        self._bias = np.ones(x)
         self.vdb = np.zeros(x)
         self.sdb = np.zeros(x)
 
@@ -116,7 +118,7 @@ class Bias(Layer):
         adds the biases to the 1D input vector
         Returns Result
         """
-        return input1 + self.bias
+        return input1 + self._bias
     
 
     def backwardPass(self, priorGradient):
@@ -127,50 +129,27 @@ class Bias(Layer):
         return priorGradient
 
 
-    def updateGrad(self, stepSize, grad):
+    def updateGrad(self, grad, parameters):
         """
         Performs an update to the biases.
         Should be done after the avg is computes from a minibatch
         """
-        b1 = .9
-        b2 = .99
-        epsilon = 10e-8
+        if parameters.momentum == True:
+            self.vdb = parameters.beta1 * self.vdb + (1 - parameters.beta1) * grad
+            self._bias -= self.vdb * parameters.stepSize
+        else:
+            self._bias -= grad * parameters.stepSize
 
-        self.vdb = b1 * self.vdb + (1-b1) * grad
-        self.sdb = b2 * self.sdb + (1-b2) * grad**2
-        #needs to add correction
-        #performs update
-        self.bias -= stepSize * self.vdb / ((self.sdb)**1/2 + epsilon)
-        #self.bias -= stepSize * grad
+        if parameters.RMSProp == True:
+            self.sdb = parameters.beta2 * self.sdb + (1 - parameters.beta2) * grad**2
+            self._bias /= (self.sdb + parameters.epsilon)**.5
 
-        
-    def getBias(self):
+    @property
+    def bias(self):
         """
         Returns the biases
         """
-        return self.bias
-
-
-
-#class NoBias(Bias):
-#    """
-#    Layer to be used when no bias is desired
-#    """
-
-#    def __init__(self):
-#        pass
-
-#    def forwardPass(self, input):
-#        return input
-    
-#    def backwardPass(self, grad):
-#        return grad
-    
-#    def updateGrad(self, grad):
-#        pass
-    
-#    def getBias(self):
-#        return None
+        return self._bias
 
 
 
@@ -186,9 +165,9 @@ class Multiplication(Layer):
         stores weights and input for the backward pass.
         Returns a dot product between them
         """
-        self.weights = weights.getWeights()
+        self._weights = weights.weights
         self.input = inputVector
-        return np.dot(self.weights, self.input)
+        return np.dot(self._weights, self.input)
 
 
     def backwardPass(self, priorGradient):
@@ -197,7 +176,7 @@ class Multiplication(Layer):
         Returns weightGrad, inputGrad
         """
         #creates matrices of the proper size to hold the gradients
-        weightGrad = np.ones(np.shape(self.weights))
+        weightGrad = np.ones(np.shape(self._weights))
         inputGrad = np.ones(np.shape(self.input))
 
         #creates the weightGrad
@@ -214,7 +193,7 @@ class Multiplication(Layer):
         #creates the inputGrad
         for i in range(len(self.input)):
             #takes the sum of the weightsRow that impacted the inputGrad's effect
-            weightRow = self.weights[:, i]
+            weightRow = self._weights[:, i]
             #multiplies together the row each priorGradient that it was related t0
             tempGrad = np.multiply(weightRow, priorGradient)
             #takes the sum of the 'i' row impact as the local gradient 
@@ -223,8 +202,9 @@ class Multiplication(Layer):
 
         return weightGrad, inputGrad
 
-    def getWeights(self):
-        return self.weights
+    @property
+    def weights(self):
+        return self._weights
 
 
 
@@ -287,11 +267,21 @@ class Sigmoid(Layer):
     1/(1+ e^-x) activation function
     """
     def forwardPass(self, input1):
+        """
+        forwards an input vector through sigmoid function.
+        May encounter an overflow value in runtime from very
+        negative inputs leading the activation to 0.
+        """
         self.input1 = input1
+        min = np.amin(input1)
         result = 1 / (1 + np.exp(-input1))
         return result
 
+
     def backwardPass(self, priorGradient):
+        """
+        Takes the derivative of sigmoid and mutliplies it by the prior gradient.
+        """
         localGrad = 1 / (2 + np.exp(self.input1) + np.exp(-self.input1))
         return localGrad * priorGradient
 
@@ -312,7 +302,6 @@ class Softmax(Layer):
         #saves input1 for use in calling scores
         self.input1 = input1
 
-        self.scores = input1 #for access, should be fixed later
         #saves label input for backward pass
         self.labelIndex = label
 
@@ -334,10 +323,10 @@ class Softmax(Layer):
 
         #calculates probScores and saves for back pass
         #(scores are 0-1 probability based on networks scores)
-        self.probScores = exp * invSum
+        self._probScores = exp * invSum
 
         #computes loss (-log is 0 when score is 1, increases as score gets lower)
-        self.loss = -math.log(self.probScores[self.labelIndex])
+        self._loss = -math.log(self._probScores[self.labelIndex])
 
 
     def backwardPass(self, priorGradient = None):
@@ -347,22 +336,30 @@ class Softmax(Layer):
         so it can be ignored
         """
         try:
-            grad = self.probScores
+            grad = self._probScores
             grad[self.labelIndex] -= 1
             return grad
 
         except NameError:
             print('Cannot backwardPass Softmax w/o a forward pass done first.')
 
-
-    def getLoss(self):
+    @property
+    def loss(self):
         """
         Returns the loss of the network
         """
         try:
-            return self.loss
+            return self._loss
         except NameError:
             print('No Loss value has been created.\nNeed to perform a forward pass to get loss')
+
+    @property
+    def scores(self):
+        return self.input1
+
+    @property
+    def probScores(self):
+        return self._probScores
 
 
 
@@ -403,5 +400,5 @@ def main():
     print('Leaky ReLU Test:')
     leakyReLUTest()
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()

@@ -14,28 +14,62 @@ class Parameters():
     using only one variable
     """
 
-    def __init__(self, stepSize, regularization, decay, miniBatchSize, epochs):
+    def __init__(self, stepSize, regularization, decay, RMSProp = True, momentum = True):
         self._stepSize = stepSize
         self._regularization = regularization
         self._decay = decay
-        self._miniBatchSize = miniBatchSize
-        self._epochs = epochs
+
+        if momentum == True:
+            self._momentum = True
+            self._beta1 = .9
+        else:
+            self._momentum = False
+
+        if RMSProp == True:
+            self._RMSProp = True
+            self._beta2 = .99
+            self._epsilon = 1e-8
+        else:
+            self._RMSProp = False
 
     #getters for the class
+    @property
     def stepSize(self):
         return self._stepSize
 
+    @property
     def regularization(self):
         return self._regularization
     
+    @property
     def decay(self):
         return self._decay
 
-    def batchSize(self):
-        return self._miniBatchSize
+    @property
+    def RMSProp(self):
+        return self._RMSProp
 
-    def epochs(self):
-        return self._epochs
+    @property
+    def momentum(self):
+        return self._momentum
+
+    @property
+    def beta1(self):
+        return self._beta1
+
+    @property
+    def beta2(self):
+        return self._beta2
+
+    @property
+    def epsilon(self):
+        return self._epsilon
+
+    @stepSize.setter
+    def stepSize(self, stepSize):
+        self._stepSize = stepSize
+
+
 
 
 class Network():
@@ -53,10 +87,16 @@ class Network():
         self.parameters = parameters
         self.layers = layers
 
+        #creates mean and variance when training to use
+        self.meanImg = 255
+        self.variance = 1
+
         #creates output lists, updated in trainBatch and pickled
         #after training is completed
         self.lossList = []
+        self.batchAccuracyList = []
         self.accuracyList = []
+       
         
 
     def forwardPass(self, image, labelIndex):
@@ -66,7 +106,9 @@ class Network():
         """
         #layer = (Weights, Multiplication, Bias, Activation).....(loss)
         #self.vector = []
-        self.vectors = [np.array(image) / 255]
+
+        self.vectors = [(np.array(image) - self.meanImg)/self.variance**.5]
+
         for layer in self.layers[:-1]:
             outputVector = layer[1].forwardPass(layer[0], self.vectors[-1])
             if layer[2] != None:
@@ -195,11 +237,11 @@ class Network():
 
         #update weights for minibatch gradients
         layerNum = 0
-        stepSize = 1/(1 + decay * epoch) * self.parameters.stepSize()
+        self.parameters.stepSize = 1/(1 + decay * epoch) * self.parameters.stepSize
         for layer in self.layers[:-1]:
-            layer[0].updateGrad(stepSize, dW[layerNum], regularization)
+            layer[0].updateGrad(dW[layerNum], self.parameters)
             if layer[2] != None:
-                layer[2].updateGrad(stepSize, dB[layerNum])
+                layer[2].updateGrad(dB[layerNum], self.parameters)
             layerNum += 1
 
         #outputs data after training the minibatch
@@ -210,7 +252,7 @@ class Network():
 
         #add values to self lists to be pickled after training is complete.
         self.lossList.append(loss)
-        self.accuracyList.append(accuracy)
+        self.batchAccuracyList.append(accuracy)
 
         #prints values to console so training can be seen
         #gives confidence the network isn't dead for the whole
@@ -220,17 +262,20 @@ class Network():
 
 
    
-    def train(self, trainImages, trainLabels, parameters):
+    def train(self, trainImages, trainLabels, testImages, testLabels, parameters, batchSize, epochs):
         """
         Trains the network based on ALL train data
         and the parameters given.
         After this method is run the network is ready for use.
         """
+
+        #records mean and variance of train data
+        self.meanImg = np.mean(trainImages)
+        self.variance = np.var(trainImages)
+
         #gets the paremeters to be used
-        batchSize = parameters.batchSize()
-        epochs = parameters.epochs()
-        regularization = parameters.regularization()
-        decay = parameters.decay()
+        regularization = parameters.regularization
+        decay = parameters.decay
 
         #times the network train time
         startTime = time.perf_counter()
@@ -249,9 +294,13 @@ class Network():
             
             #creates an index to use for slicing
             dataIndex = 0
+            trainOrder = np.random.choice(len(trainImages), len(trainImages), replace = False) #returns a randomly ordered list of all indexes
             
             #trains for the number of minibatches in the whole dataset
             for i in range(numMinibatches):
+
+                if(i % 10 == 0): #for every 100th batch, take a test accuracy sample
+                    self.accuracyList.append((x * numMinibatches + i, self.accuracyTest(testImages, testLabels)))
 
                 #miniBatch time tracker
                 miniBatchStartTime = time.perf_counter()
@@ -260,7 +309,6 @@ class Network():
                 #miniBatchImages = trainImages[dataIndex : dataIndex+batchSize]
                 #miniBatchLabels = trainLabels[dataIndex : dataIndex+batchSize]
 
-                trainOrder = np.random.choice(len(trainImages), len(trainImages), replace = False) #returns a randomly ordered list of all indexes
                 batchImages = []
                 batchLabels = []
                 batchIndex = trainOrder[dataIndex : dataIndex + batchSize]
@@ -278,17 +326,22 @@ class Network():
 
                 #miniBatch time tracker
                 miniBatchEndTime = time.perf_counter()
+
+                #gets data on how weights are updating
+                for layer in range(len(self.layers) - 1):
+                    weight = self.layers[layer][0].weights
+                    print('Variance of layer', layer + 1,':', np.var(weight))
+                    
                 #ouputs miniBatch time (sanity check while running)
                 print('MiniBatch Time:', miniBatchEndTime - miniBatchStartTime)
                 print('Epochs Remaining:', epochs - x - 1)
                 print('Batches in Current Epoch Remaining:', numMinibatches - i)
 
-            
-
+        self.accuracyList.append((epochs* numMinibatches, self.accuracyTest(testImages, testLabels)))    
 
         #outputs data into files for analyzation
         pickle.dump(self.lossList, lossFile)
-        pickle.dump(self.accuracyList, accuracyFile)
+        pickle.dump(self.batchAccuracyList, accuracyFile)
         
         #closes files after data is output
         lossFile.close()
@@ -311,8 +364,11 @@ class Network():
 
         #plots loss and accuracy
         lossPlot.plot(self.lossList)
-        accuracyPlot.plot(self.accuracyList)
-
+        accuracyPlot.plot(self.batchAccuracyList, label = 'Batch Accuracy')
+        testAccuracyX = [self.accuracyList[i][0] for i in range(len(self.accuracyList))]
+        testAccuracyY = [self.accuracyList[i][1] for i in range(len(self.accuracyList))]
+        accuracyPlot.plot(testAccuracyX, testAccuracyY, linestyle = 'dashed', label = 'Test Accuracy')
+        accuracyPlot.legend()
         #shows plot
         plt.show()
 
@@ -400,7 +456,7 @@ class Network():
             self.forwardPass(images[i], labels[i])
 
             #gets scores from network and picks the max index as the number guess
-            scores = np.array(self.scores())
+            scores = np.array(self.scores)
             maxScoreIndex = np.argmax(scores)
 
             #creates a title for the image showing the guess and true value
@@ -416,8 +472,9 @@ class Network():
 
         plt.show()
 
+    @property
     def scores(self):
-        return self.layers[-1].scores()
+        return self.layers[-1].scores
 
 
 
@@ -472,10 +529,10 @@ def main():
     """
 
     #layer = (Weights, Multiplication, Bias, Activation),...(loss)
-    #layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
 
-    layers = [createLayer(784,512,True,'ReLU'), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True, 'ReLU'), ly.Softmax()]
-    parameters = Parameters(stepSize = 1e-3, regularization = .2, decay = .9, miniBatchSize= 256, epochs = 2)
+    layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
+    #layers = [createLayer(784,512,True), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True), ly.Softmax()]
+    parameters = Parameters(stepSize = 1e-3, regularization = .1, decay = .9, RMSProp = False, momentum=True)
 
     #init network
     numberNet = Network(parameters, layers)
@@ -487,7 +544,7 @@ def main():
     initialAccuracy = numberNet.accuracyTest(testImages, testLabels)
 
     #trains the network
-    numberNet.train(trainImages, trainLabels, parameters)
+    numberNet.train(trainImages, trainLabels, testImages, testLabels, parameters, batchSize = 256, epochs = 1)
 
     #tests final accuracy on test data
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
@@ -505,6 +562,7 @@ def main():
 def showData():
     networkFile = open('network', 'rb')
     network = pickle.load(networkFile)
+    networkFile.close()
 
     network.displayData()
 
@@ -513,5 +571,6 @@ def showData():
     trainImages, trainLabels, testImages, testLabels = importData()
     network.run(testImages, testLabels, delay = 2)
 
-main()
+
+#main()
 showData()
