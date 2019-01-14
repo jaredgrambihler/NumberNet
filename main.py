@@ -532,7 +532,7 @@ def main():
 
     layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
     #layers = [createLayer(784,512,True), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True), ly.Softmax()]
-    parameters = Parameters(stepSize = 1e-3, regularization = .1, decay = .9, RMSProp = False, momentum=True)
+    parameters = Parameters(stepSize = 1e-3, regularization = 1e-3, decay = .9, RMSProp = True, momentum=True)
 
     #init network
     numberNet = Network(parameters, layers)
@@ -572,5 +572,5 @@ def showData():
     network.run(testImages, testLabels, delay = 2)
 
 
-#main()
+main()
 showData()
