@@ -15,7 +15,8 @@ class Parameters():
     """
 
     def __init__(self, stepSize, regularization, decay, RMSProp = True, momentum = True):
-        self._stepSize = stepSize
+        self._initialStepSize = stepSize
+        self._stepSize = self._initialStepSize
         self._regularization = regularization
         self._decay = decay
 
@@ -33,6 +34,9 @@ class Parameters():
             self._RMSProp = False
 
     #getters for the class
+    @property
+    def initialStepSize(self):
+        return self._initialStepSize
     @property
     def stepSize(self):
         return self._stepSize
@@ -237,7 +241,7 @@ class Network():
 
         #update weights for minibatch gradients
         layerNum = 0
-        self.parameters.stepSize = 1/(1 + decay * epoch) * self.parameters.stepSize
+        self.parameters.stepSize = 1/(1 + decay * epoch) * self.parameters.initialStepSize
         for layer in self.layers[:-1]:
             layer[0].updateGrad(dW[layerNum], self.parameters)
             if layer[2] != None:
@@ -530,9 +534,9 @@ def main():
 
     #layer = (Weights, Multiplication, Bias, Activation),...(loss)
 
-    layers = [createLayer(784, 10, True, 'ReLU'), ly.Softmax()]
-    #layers = [createLayer(784,512,True), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True), ly.Softmax()]
-    parameters = Parameters(stepSize = 1e-3, regularization = 1e-3, decay = .9, RMSProp = True, momentum=True)
+    #layers = [createLayer(784, 10, True), ly.Softmax()]
+    layers = [createLayer(784,512,True), createLayer(512,512,True, 'ReLU'), createLayer(512,10, True), ly.Softmax()]
+    parameters = Parameters(stepSize = 5e-4, regularization = 1e-3, decay = .9, RMSProp = False, momentum=True)
 
     #init network
     numberNet = Network(parameters, layers)
@@ -544,7 +548,9 @@ def main():
     initialAccuracy = numberNet.accuracyTest(testImages, testLabels)
 
     #trains the network
-    numberNet.train(trainImages, trainLabels, testImages, testLabels, parameters, batchSize = 256, epochs = 1)
+    numberNet.train(trainImages, trainLabels, testImages, testLabels, parameters, batchSize = 256, epochs = 10)
+    #numberNet.train(trainImages[:10], trainLabels[:10], testImages, testLabels, parameters, batchSize = 10, epochs = 1000)
+
 
     #tests final accuracy on test data
     finalAccuracy = numberNet.accuracyTest(testImages, testLabels)
