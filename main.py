@@ -31,24 +31,6 @@ def importData(dir = './mnist'):
         return None
     return None
 
-def createLayer(input, output, bias = False, activationFunction = ""):
-    layerList = []
-    layerList.append(ly.Weights(output, input))
-    layerList.append(ly.Multiplication())
-    if (bias == False):
-        layerList.append(None)
-    else:
-        layerList.append(ly.Bias(output))
-    if(activationFunction != ""):
-        if activationFunction == 'ReLU':
-            layerList.append(ly.ReLU())
-        elif activationFunction == 'Sigmoid':
-            layerList.append(ly.Sigmoid())
-        elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
-            layerList.append(ly.LeakyReLU())
-
-    return layerList
-
 def main():
     """
     Trains the network and pickles it after it is trained.
