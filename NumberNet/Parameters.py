@@ -23,10 +23,11 @@ class Parameters():
         else:
             self._RMSProp = False
 
-    #getters for the class
+    #getters for the class, avoids changing of variables
     @property
     def initialStepSize(self):
         return self._initialStepSize
+   
     @property
     def stepSize(self):
         return self._stepSize
@@ -62,4 +63,3 @@ class Parameters():
     @stepSize.setter
     def stepSize(self, stepSize):
         self._stepSize = stepSize
-

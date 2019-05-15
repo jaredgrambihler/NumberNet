@@ -1,3 +1,10 @@
+import numpy as np
+import time, pickle
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+#TODO break this file up
+
 class Network():
     """
     Creates the network.
@@ -23,13 +30,11 @@ class Network():
         self.accuracyList = []
        
         
-
     def forwardPass(self, image, labelIndex):
         """
         Forwards an image through the network.
         """
-        #layer = (Weights, Multiplication, Bias, Activation).....(loss)
-        #self.vector = []
+        #TODO REDO THIS
 
         self.vectors = [(np.array(image) - self.meanImg)/self.variance**.5]
 
@@ -47,6 +52,7 @@ class Network():
         """
         Backprops image through the network
         """
+        #TODO REDO THIS
         #Layers store the values needed for computing gradients.
         #Gradient passes b/w layers must be hardcoded.
         #Retruns the gradients of the weights and biases (also hardcoded)
@@ -183,7 +189,6 @@ class Network():
         #train time.
         print('\nLoss: ', loss)
         print('Batch Accuracy: ' , accuracy)
-
 
    
     def train(self, trainImages, trainLabels, testImages, testLabels, parameters, batchSize, epochs):
@@ -358,10 +363,6 @@ class Network():
         Displays the image it is recognizing and the networks guess,
         as well as the correct answer.
         """
-    
-        #import data
-        trainImages, trainLabels, testImages, testLabels = importData()
-
         #creates a matplotlib figure to show images
         fig = plt.figure()
         ax1 = fig.add_subplot(1,1,1)
@@ -399,5 +400,3 @@ class Network():
     @property
     def scores(self):
         return self.layers[-1].scores
-
-

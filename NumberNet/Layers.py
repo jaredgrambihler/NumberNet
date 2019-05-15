@@ -1,6 +1,6 @@
 import numpy as np
 import math
-import ActivationFunctions
+from . import ActivationFunctions
 
 class Layer:
     """
@@ -14,9 +14,9 @@ class Layer:
 
     def __init__(self, inputSize, outputSize, bias = False, activationFunction = None):
         #make inputs take parameters?
-        self.input = np.array(inputSize, outputSize)
-        self.weigths = []
-        self.bias = []
+        self.input = np.array(inputSize)
+        self.weigths = Weights(inputSize, outputSize)
+        self.bias = [] #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
         #Sets activation function
         if(activationFunction):
             if activationFunction == 'ReLU':
@@ -117,7 +117,6 @@ class Weights:
         return self._weights
 
 
-
 class Bias:
     """
     Layer for biases.
@@ -173,7 +172,81 @@ class Bias:
         return self._bias
 
 
+class Softmax:
+    """
+    Computes softmax loss.
+    This class simplifies the full operations of softmax.
+    Reference to the full intution of softmax can be found here: http://cs231n.github.io/linear-classify/#softmax
+    """
 
+    def forwardPass(self, input1, label):
+        """
+        Forwards scores and the correct label through the function
+        to evaluate it's loss
+        """
+        #saves input1 for use in calling scores
+        self.input1 = input1
+
+        #saves label input for backward pass
+        self.labelIndex = label
+
+        #prevents values from being too high to exponentiate (744)
+        #Also tries not to shrink them so low they vanish to 0 and
+        #cannot be logged.
+        maxVal = np.max(input1)
+        if(maxVal == 0): #prevents divide by zero error
+            maxVal = 1/744
+        expNum = input1 / (maxVal * 744)
+
+        #exponentiates safe values
+        exp = np.exp(expNum)
+
+        #sums all weights and creates 1/sum to multiply
+        #and find the probability scores
+        sumVal = np.sum(exp)
+        invSum = 1/sumVal
+
+        #calculates probScores and saves for back pass
+        #(scores are 0-1 probability based on networks scores)
+        self._probScores = exp * invSum
+
+        #computes loss (-log is 0 when score is 1, increases as score gets lower)
+        self._loss = -math.log(self._probScores[self.labelIndex])
+
+
+    def backwardPass(self, priorGradient = None):
+        """
+        Returns the gradient of the loss.
+        There is never a priorGradient to the loss function,
+        so it can be ignored
+        """
+        try:
+            grad = self._probScores
+            grad[self.labelIndex] -= 1
+            return grad
+
+        except NameError:
+            print('Cannot backwardPass Softmax w/o a forward pass done first.')
+
+    @property
+    def loss(self):
+        """
+        Returns the loss of the network
+        """
+        try:
+            return self._loss
+        except NameError:
+            print('No Loss value has been created.\nNeed to perform a forward pass to get loss')
+
+    @property
+    def scores(self):
+        return self.input1
+
+    @property
+    def probScores(self):
+        return self._probScores
+
+#To Delete
 class Multiplication:
     """
     Multiplies together two matrices
