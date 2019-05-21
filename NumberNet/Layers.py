@@ -7,16 +7,13 @@ class Layer:
     Class to be defined for each layer of the network.
     """
     #Layer format
-    #input - (maybe?) allocate to store forward pass input
     #Weights
     #Biases (can move to weights later to optimize)
     #Activation Function (can be None)
 
     def __init__(self, inputSize, outputSize, bias = False, activationFunction = None):
-        #make inputs take parameters?
-        self.input = np.array(inputSize)
-        self.weigths = Weights(inputSize, outputSize)
-        self.bias = [] #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
+        self.weights = Weights(inputSize, outputSize)
+        self.bias = Bias(outputSize) #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
         #Sets activation function
         if(activationFunction):
             if activationFunction == 'ReLU':
@@ -26,28 +23,71 @@ class Layer:
             elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
                 self.activationFunction = ActivationFunctions.LeakyReLU()
         else:
-            self.actiavtionFuntion = None
+            self.activationFunction = None
 
     #FORWARD AND BACKWARD PASS FROM MULTIPLICATION LAYER
-    def forwardPass(self, weights, inputVector):
+    #should handle the forward or backward pass of each layer, taking in the input and returning the output for forward. Takes in gradient and returns it for backwards.
+    def forwardPass(self, inputVector):
         """
         stores weights and input for the backward pass.
         Returns a dot product between them
         """
-        self._weights = weights.weights
-        self.input = inputVector
-        return np.dot(self._weights, self.input)
+        #TODO add data to weights/bias for saving
+        weightOutput = self.weights.forwardPass(inputVector)
+        biasOutput = weightOutput + self.bias.bias
+        if(self.activationFunction):
+            return self.activationFunction.forwardPass(biasOutput)
+        else:
+            return biasOutput
 
     def backwardPass(self, priorGradient):
         """
         Computes gradients of both the weights and the input
         Returns weightGrad, inputGrad
         """
+        #redo to store weight grads in weights object and return current grad
+
+        if(self.activationFunction):
+            priorGradient = self.activationFunction.backwardPass(priorGradient)
+        priorGradient = self.bias.backwardPass(priorGradient)
+        priorGradient = self.weights.backwardPass(priorGradient)
+        return priorGradient
+
+    def updateGrad(self, numData, parameters):
+        #method to upgrade gradients of weights in biases in the layer
+        self.weights.updateGrad(numData, parameters)
+        self.bias.updateGrad(numData, parameters)
+
+
+class Weights:
+    """Class for weights on each layer"""
+    #ADD STORAGE OF GRADIENTS FOR EACH FORWARD PASS TO BE USED IN UPDATEGRAD
+    def __init__(self, inputSize, outputSize):
+        """
+        Creates weights based on the input size.
+        x = number of outputs
+        y = number of inputs
+        """
+        #guassian distribution w/ sd of sqrt(2/inputs)
+        self._weights = np.random.randn(inputSize*outputSize) * math.sqrt(2.0/outputSize)
+        self._weights = np.reshape(self._weights, (outputSize, inputSize))
+
+        #learning params
+        self.vdw = np.zeros((outputSize, inputSize))
+        self.sdw = np.zeros((outputSize, inputSize))
+        self.grad = np.zeros((outputSize, inputSize))
+
+
+    def forwardPass(self, inputVector):
+        self.input = inputVector
+        return np.dot(self._weights, inputVector)
+
+
+    def backwardPass(self, priorGradient):
         #creates matrices of the proper size to hold the gradients
         weightGrad = np.ones(np.shape(self._weights))
         inputGrad = np.ones(np.shape(self.input))
 
-        #creates the weightGrad
         for i in range(len(self.input)):
             #mutiplies the input at i to the entire row
             #of weights it ends up impacting
@@ -68,46 +108,32 @@ class Layer:
             #(already multiplied to the prior gradient)
             inputGrad[i] = np.sum(tempGrad)
 
-        return weightGrad, inputGrad
+        self.grad += weightGrad
+        return inputGrad
 
 
-class Weights:
-    """Class for weights on each layer"""
-    def __init__(self, inputSize, outputSize):
-        """
-        Creates weights based on the input size.
-        x = number of outputs
-        y = number of inputs
-        """
-        #guassian distribution w/ sd of sqrt(2/inputs)
-        self._weights = np.random.randn(inputSize*outputSize) * math.sqrt(2.0/outputSize)
-        self._weights = np.reshape(self._weights, (inputSize,outputSize))
-
-        #learning params
-        self.vdw = np.zeros((inputSize,outputSize))
-        self.sdw = np.zeros((inputSize,outputSize))
-
-
-    def updateGrad(self, grad, parameters):
+    def updateGrad(self, numData, parameters):
         """
         Updates the weights based on gradient, stepSize, and Regularization.
         Should be called after the avg gradient is computed for a minibatch
         """
-
+        #TODO UPDATE TO USE SELF STORED GRADIENTS
         #momentum and RMSProp implemented w/o correction
+        self.grad /= numData
         if parameters.momentum == True:
-            self.vdw = parameters.beta1 * self.vdw + (1- parameters.beta1) * grad
+            self.vdw = parameters.beta1 * self.vdw + (1- parameters.beta1) * self.grad
             self._weights -= parameters.stepSize * self.vdw
         else:
-            self._weights -= parameters.stepSize * grad
+            self._weights -= parameters.stepSize * self.grad
 
         if parameters.RMSProp == True:
-            self.sdw = parameters.beta2 * self.sdw + (1 - parameters.beta2) * grad**2
+            self.sdw = parameters.beta2 * self.sdw + (1 - parameters.beta2) * self.grad**2
             self._weights /= (self.sdw + parameters.epsilon)**.5
 
         #regularization function of L2 Regularization
         #Reference : http://cs231n.github.io/neural-networks-2/
         self._weights -= parameters.regularization * self.weights
+        self.grad *= 0 #reset for next batch
 
     @property
     def weights(self):
@@ -122,6 +148,7 @@ class Bias:
     Layer for biases.
     Should be implemented after weights and input are multiplied together.
     """
+    #ADD STORAGE OF BIAS GRAD
 
     def __init__(self, x):
         """
@@ -130,39 +157,34 @@ class Bias:
         self._bias = np.ones(x)
         self.vdb = np.zeros(x)
         self.sdb = np.zeros(x)
+        self.grad = np.zeros(x)
 
-
-
-    def forwardPass(self, input1):
-        """
-        adds the biases to the 1D input vector
-        Returns Result
-        """
-        return input1 + self._bias
-    
 
     def backwardPass(self, priorGradient):
         """
-        There is no local gradient to an addition function.
-        Returns the priorGradient as is
+        No change to gradient in addition. Saves gradient for bias update.
         """
+        self.grad += priorGradient
         return priorGradient
 
 
-    def updateGrad(self, grad, parameters):
+    def updateGrad(self, numData, parameters):
         """
         Performs an update to the biases.
         Should be done after the avg is computes from a minibatch
         """
+        self.grad /= numData
         if parameters.momentum == True:
-            self.vdb = parameters.beta1 * self.vdb + (1 - parameters.beta1) * grad
+            self.vdb = parameters.beta1 * self.vdb + (1 - parameters.beta1) * self.grad
             self._bias -= self.vdb * parameters.stepSize
         else:
-            self._bias -= grad * parameters.stepSize
+            self._bias -= self.grad * parameters.stepSize
 
         if parameters.RMSProp == True:
-            self.sdb = parameters.beta2 * self.sdb + (1 - parameters.beta2) * grad**2
+            self.sdb = parameters.beta2 * self.sdb + (1 - parameters.beta2) * self.grad**2
             self._bias /= (self.sdb + parameters.epsilon)**.5
+        self.grad *= 0 #reset grad
+
 
     @property
     def bias(self):

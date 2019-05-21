@@ -21,7 +21,7 @@ def main():
     initialAccuracy = network.accuracyTest(testImages, testLabels)
 
     #trains the network
-    network.train(trainImages, trainLabels, testImages, testLabels, parameters, batchSize = 256, epochs = 10)
+    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 512, epochs = 1)
 
     #tests final accuracy on test data
     finalAccuracy = network.accuracyTest(testImages, testLabels)
