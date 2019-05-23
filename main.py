@@ -8,11 +8,12 @@ def main():
     Trains the network and pickles it after it is trained.
     Once trained, the network can be run on data without needing to be trained again.
     """
-    layers = [NN.Layer(784,512,True), NN.Layer(512,512,True, 'ReLU'), NN.Layer(512,10, True), NN.Layers.Softmax()]
+    layers = [NN.Layer(784,512,True), NN.Layer(512,512,True, 'ReLU'), NN.Layer(512,10, True)]
+    lossFunction = NN.Layers.Softmax()
     parameters = NN.Parameters(stepSize = 5e-4, regularization = 1e-3, decay = .9, RMSProp = False, momentum=True)
 
     #init network
-    network = NN.Network(parameters, layers)
+    network = NN.Network(parameters, layers, lossFunction)
 
     #import data
     trainImages, trainLabels, testImages, testLabels = importData()
@@ -21,7 +22,7 @@ def main():
     initialAccuracy = network.accuracyTest(testImages, testLabels)
 
     #trains the network
-    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 512, epochs = 1)
+    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 1024, epochs = 1)
 
     #tests final accuracy on test data
     finalAccuracy = network.accuracyTest(testImages, testLabels)
@@ -47,5 +48,5 @@ def showData():
     trainImages, trainLabels, testImages, testLabels = importData()
     network.run(testImages, testLabels, delay = 2)
 
-main()
+#main()
 showData()

@@ -11,12 +11,13 @@ class Network():
     Pickled after training to run data on it.
     """
 
-    def __init__(self, parameters, layers):
+    def __init__(self, parameters, layers, lossFunction):
         """
         Initializes the class with the given parameters and layers
         """
         self.parameters = parameters
         self.layers = layers
+        self.lossFunction = lossFunction 
 
         #creates output lists, updated in trainBatch and pickled after training is completed
         self.lossList = []
@@ -34,9 +35,9 @@ class Network():
         Forwards an image through the network.
         """
         currentVector = data
-        for layer in self.layers[:-1]:
+        for layer in self.layers:
             currentVector = layer.forwardPass(currentVector)
-        self.layers[-1].forwardPass(currentVector, labelIndex) #loss
+        self.lossFunction.forwardPass(currentVector, labelIndex) #loss
         return currentVector #scores
 
 
@@ -49,9 +50,9 @@ class Network():
         #Weights and bias gradients stored in each layer
         grads = []
 
-        currentGrad = self.layers[-1].backwardPass() #loss grad, localGrad is priorGrad arg
-        for i in range(1, len(self.layers)): #1 ignores weights layer
-            currentGrad = self.layers[-i].backwardPass(currentGrad)
+        currentGrad = self.lossFunction.backwardPass() #loss grad, localGrad is priorGrad arg
+        for i in range(len(self.layers)): #1 ignores weights layer
+            currentGrad = self.layers[-(i+1)].backwardPass(currentGrad)
 
     
     def accuracy(self, data, label):
@@ -112,7 +113,7 @@ class Network():
             accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
 
             #updates loss
-            loss += self.layers[-1].loss #think about making loss function a seperate method outside of layers
+            loss += self.lossFunction.loss #think about making loss function a seperate method outside of layers
 
             #backprops and adds to weights and biases
             self.backwardPass()
@@ -234,21 +235,17 @@ class Network():
         Vizualizes the weights in the network.
         Hard Coded so will only work with a known layer of weights.
         """
-        #TODO - fix this
-
         #makes a list of np arrays for all weights
         weights = []
     
         #appends all 10 final weights to the list
-        for i in range(10):
-            weights.append(np.array(self.layers[0][0].weights[i]))
+        for i in range(len(self.layers[0].weights.weights)):
+            weights.append(self.layers[0].weights.weights[i]) #check if np array
         
         #finds max value to scale images
         #uses absolute values to avoid negatives
         maxPixel = np.amax(np.abs(weights))
-
-        #scales array to 255.0 pixel values
-        scalar = 255.0 / maxPixel
+        scalar = 255.0 / maxPixel #scales array to 255.0 pixel values
     
         for i in range(len(weights)):
             #scales weights to 255.0 values
@@ -327,4 +324,4 @@ class Network():
 
     @property
     def scores(self):
-        return self.layers[-1].scores
+        return self.lossFunction.probScores

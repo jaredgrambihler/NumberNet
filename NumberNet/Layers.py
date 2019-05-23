@@ -32,7 +32,6 @@ class Layer:
         stores weights and input for the backward pass.
         Returns a dot product between them
         """
-        #TODO add data to weights/bias for saving
         weightOutput = self.weights.forwardPass(inputVector)
         biasOutput = weightOutput + self.bias.bias
         if(self.activationFunction):
