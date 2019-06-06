@@ -1,7 +1,6 @@
 class Parameters():
     """
-    Class used to pass hyperparameters for the network around
-    using only one variable
+    Class used to store hyperparameters.
     """
 
     def __init__(self, stepSize, regularization, decay, RMSProp = True, momentum = True):
@@ -23,7 +22,7 @@ class Parameters():
         else:
             self._RMSProp = False
 
-    #getters for the class, avoids changing of variables
+    #getters for the class
     @property
     def initialStepSize(self):
         return self._initialStepSize

@@ -13,7 +13,10 @@ class Layer:
 
     def __init__(self, inputSize, outputSize, bias = False, activationFunction = None):
         self.weights = Weights(inputSize, outputSize)
-        self.bias = Bias(outputSize) #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
+        if(bias):
+            self.bias = Bias(outputSize) #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
+        else:
+            self.bias = None
         #Sets activation function
         if(activationFunction):
             if activationFunction == 'ReLU':
@@ -22,6 +25,8 @@ class Layer:
                 self.activationFunction = ActivationFunctions.Sigmoid()
             elif activationFunction == 'LeakyReLU' or activationFunction == 'HipsterReLU':
                 self.activationFunction = ActivationFunctions.LeakyReLU()
+            else:
+                raise Exception #invalid activation function
         else:
             self.activationFunction = None
 
@@ -33,7 +38,10 @@ class Layer:
         Returns a dot product between them
         """
         weightOutput = self.weights.forwardPass(inputVector)
-        biasOutput = weightOutput + self.bias.bias
+        if(self.bias):
+            biasOutput = weightOutput + self.bias.bias
+        else:
+            biasOuput = weightOutput
         if(self.activationFunction):
             return self.activationFunction.forwardPass(biasOutput)
         else:
@@ -44,11 +52,10 @@ class Layer:
         Computes gradients of both the weights and the input
         Returns weightGrad, inputGrad
         """
-        #redo to store weight grads in weights object and return current grad
-
         if(self.activationFunction):
             priorGradient = self.activationFunction.backwardPass(priorGradient)
-        priorGradient = self.bias.backwardPass(priorGradient)
+        if(self.bias):
+            priorGradient = self.bias.backwardPass(priorGradient)
         priorGradient = self.weights.backwardPass(priorGradient)
         return priorGradient
 
@@ -116,7 +123,6 @@ class Weights:
         Updates the weights based on gradient, stepSize, and Regularization.
         Should be called after the avg gradient is computed for a minibatch
         """
-        #TODO UPDATE TO USE SELF STORED GRADIENTS
         #momentum and RMSProp implemented w/o correction
         self.grad /= numData
         if parameters.momentum == True:

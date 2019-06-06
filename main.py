@@ -8,7 +8,7 @@ def main():
     Trains the network and pickles it after it is trained.
     Once trained, the network can be run on data without needing to be trained again.
     """
-    layers = [NN.Layer(784,512,True), NN.Layer(512,512,True, 'ReLU'), NN.Layer(512,10, True)]
+    layers = [NN.Layer(784,512,True, 'ReLU'), NN.Layer(512,10,True)]
     lossFunction = NN.Layers.Softmax()
     parameters = NN.Parameters(stepSize = 5e-4, regularization = 1e-3, decay = .9, RMSProp = False, momentum=True)
 
@@ -48,5 +48,5 @@ def showData():
     trainImages, trainLabels, testImages, testLabels = importData()
     network.run(testImages, testLabels, delay = 2)
 
-#main()
+main()
 showData()
