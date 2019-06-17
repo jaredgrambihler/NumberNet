@@ -6,12 +6,13 @@ class Layer:
     """
     Class to be defined for each layer of the network.
     """
-    #Layer format
+    #---Layer format---
     #Weights
     #Biases (can move to weights later to optimize)
     #Activation Function (can be None)
 
     def __init__(self, inputSize, outputSize, bias = False, activationFunction = None):
+        #TODO - for bias and activation function instead of setting to None create versions of those classes w/ no impact to simplify code.
         self.weights = Weights(inputSize, outputSize)
         if(bias):
             self.bias = Bias(outputSize) #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
@@ -75,7 +76,7 @@ class Weights:
         y = number of inputs
         """
         #guassian distribution w/ sd of sqrt(2/inputs)
-        self._weights = np.random.randn(inputSize*outputSize) * math.sqrt(2.0/outputSize)
+        self._weights = np.random.randn(inputSize*outputSize) * math.sqrt(2.0/inputSize)
         self._weights = np.reshape(self._weights, (outputSize, inputSize))
 
         #learning params
@@ -272,57 +273,3 @@ class Softmax:
     @property
     def probScores(self):
         return self._probScores
-
-#To Delete
-class Multiplication:
-    """
-    Multiplies together two matrices
-    weights = weights matrix
-    input = 1D input vector
-    """
-
-    def forwardPass(self, weights, inputVector):
-        """
-        stores weights and input for the backward pass.
-        Returns a dot product between them
-        """
-        self._weights = weights.weights
-        self.input = inputVector
-        return np.dot(self._weights, self.input)
-
-
-    def backwardPass(self, priorGradient):
-        """
-        Computes gradients of both the weights and the input
-        Returns weightGrad, inputGrad
-        """
-        #creates matrices of the proper size to hold the gradients
-        weightGrad = np.ones(np.shape(self._weights))
-        inputGrad = np.ones(np.shape(self.input))
-
-        #creates the weightGrad
-        for i in range(len(self.input)):
-            #mutiplies the input at i to the entire row
-            #of weights it ends up impacting
-            tempGrad = self.input[i]
-            weightGrad[: , i] = tempGrad
-        for i in range(len(priorGradient)):
-            #takes the priorGradient at i and multiplies
-            #it to the entire row that was a part of it's result
-            weightGrad[i] *= priorGradient[i]
-
-        #creates the inputGrad
-        for i in range(len(self.input)):
-            #takes the sum of the weightsRow that impacted the inputGrad's effect
-            weightRow = self._weights[:, i]
-            #multiplies together the row each priorGradient that it was related t0
-            tempGrad = np.multiply(weightRow, priorGradient)
-            #takes the sum of the 'i' row impact as the local gradient 
-            #(already multiplied to the prior gradient)
-            inputGrad[i] = np.sum(tempGrad)
-
-        return weightGrad, inputGrad
-
-    @property
-    def weights(self):
-        return self._weights

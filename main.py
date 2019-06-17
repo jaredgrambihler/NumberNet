@@ -10,7 +10,7 @@ def main():
     """
     layers = [NN.Layer(784,512,True, 'ReLU'), NN.Layer(512,10,True)]
     lossFunction = NN.Layers.Softmax()
-    parameters = NN.Parameters(stepSize = 5e-4, regularization = 1e-3, decay = .9, RMSProp = False, momentum=True)
+    parameters = NN.Parameters(stepSize = 1e-3, regularization = 1e-5, decay = .9, RMSProp = False, momentum=True)
 
     #init network
     network = NN.Network(parameters, layers, lossFunction)
