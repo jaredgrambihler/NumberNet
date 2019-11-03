@@ -90,33 +90,13 @@ class Weights:
         return np.dot(self._weights, inputVector)
 
 
-    def backwardPass(self, priorGradient):
-        #creates matrices of the proper size to hold the gradients
-        weightGrad = np.ones(np.shape(self._weights))
-        inputGrad = np.ones(np.shape(self.input))
-
-        for i in range(len(self.input)):
-            #mutiplies the input at i to the entire row
-            #of weights it ends up impacting
-            tempGrad = self.input[i]
-            weightGrad[: , i] = tempGrad
-        for i in range(len(priorGradient)):
-            #takes the priorGradient at i and multiplies
-            #it to the entire row that was a part of it's result
-            weightGrad[i] *= priorGradient[i]
-
-        #creates the inputGrad
-        for i in range(len(self.input)):
-            #takes the sum of the weightsRow that impacted the inputGrad's effect
-            weightRow = self._weights[:, i]
-            #multiplies together the row each priorGradient that it was related t0
-            tempGrad = np.multiply(weightRow, priorGradient)
-            #takes the sum of the 'i' row impact as the local gradient 
-            #(already multiplied to the prior gradient)
-            inputGrad[i] = np.sum(tempGrad)
-
-        self.grad += weightGrad
-        return inputGrad
+    def backwardPass(self, prior):
+        self.input = np.array(self.input)
+        if(len(self.input.shape) == 1):
+            self.grad += np.dot(np.reshape(prior, (prior.shape[0], 1)), np.reshape(self.input, (1, self.input.shape[0])))
+        else:
+            self.__grad += np.dot(prior, np.reshape(self.input, (self.input.shape[1], self.input.shape[0])))
+        return np.dot(np.transpose(self._weights), prior)
 
 
     def updateGrad(self, numData, parameters):
