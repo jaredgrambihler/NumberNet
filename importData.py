@@ -1,3 +1,9 @@
+"""
+Module to import data from MNIST dataset.
+Dependencies:
+    python-mnist
+"""
+
 from mnist import MNIST
 
 def importData(dir = './mnist'):

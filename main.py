@@ -5,47 +5,38 @@ import math, pickle
 
 def main():
     """
-    Trains the network and pickles it after it is trained.
-    Once trained, the network can be run on data without needing to be trained again.
+    Basic main function to demonstrate training and running of a Network.
+    Can be modified as desired for different layers, data, etc.
     """
     layers = [NN.Layer(784,512,True, 'ReLU'), NN.Layer(512,10,True)]
-    lossFunction = NN.Layers.Softmax()
-    parameters = NN.Parameters(stepSize = 1e-3, regularization = 1e-5, decay = .9, RMSProp = False, momentum=True)
-
-    #init network
-    network = NN.Network(parameters, layers, lossFunction)
-
-    #import data
-    trainImages, trainLabels, testImages, testLabels = importData()
-
-    #test initial accuracy on test data
+    #layers is a list to be used in the network. Each element is a NN.Layer object
+    parameters = NN.Parameters(stepSize = 1e-4, regularization = 1e-5, decay = .9, RMSProp = False, momentum=True)
+    #parameters is an object which defines the training parameters of the network.
+    network = NN.Network(parameters, layers, NN.Layers.Softmax()) #initialize network with parameters, layers,
+                                                                  #and softmax activation function
+    trainImages, trainLabels, testImages, testLabels = importData()  #import MNIST data
     initialAccuracy = network.accuracyTest(testImages, testLabels)
-
-    #trains the network
-    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 1024, epochs = 1)
-
-    #tests final accuracy on test data
+    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 512, epochs = 1) #train network
     finalAccuracy = network.accuracyTest(testImages, testLabels)
-
-    #display output data
-    print('initAccuracy: ', initialAccuracy)
+    print('initAccuracy: ', initialAccuracy) #display accuracy data
     print('finalAccuracy: ', finalAccuracy)
-
-    #pickles network for re-use
-    networkFile = open('network', 'wb')
+    networkFile = open('network', 'wb') #pickle and save network for re-use
     pickle.dump(network, networkFile)
     networkFile.close()
 
 def showData():
-    networkFile = open('network', 'rb')
+    """
+    Runs a saved network on a given dataset and displays results
+    Shows networks data from training, vizualization of weights,
+    then runs the network on the given data. The displays are hardcoded
+    to work with MNIST data.
+    """
+    networkFile = open('network', 'rb') #load network in
     network = pickle.load(networkFile)
     networkFile.close()
-
     network.displayData()
-
     network.visualizeWeights()
-    
-    trainImages, trainLabels, testImages, testLabels = importData()
+    trainImages, trainLabels, testImages, testLabels = importData() #load MNIST data
     network.run(testImages, testLabels, delay = 2)
 
 main()
