@@ -1,0 +1,12 @@
+#ignore pycaches
+__pycache__
+/NumberNet/__pycache__
+/Tests/__pycache__
+
+#ignore pickle files made by network
+accuracy
+loss
+network
+
+#ignore vscode
+.vscode

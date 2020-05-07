@@ -30,7 +30,7 @@ class Layer:
         """
         self.weights = Weights(inputSize, outputSize)
         if(bias):
-            self.bias = Bias(outputSize) #DETERMINE IF BIAS IS FORWARD/BACKWARD HERE OR IN SEPERATE CLASS
+            self.bias = Bias(outputSize)
         else:
             self.bias = None
         #Sets activation function
@@ -59,15 +59,13 @@ class Layer:
         """
         #weights/bias classes handles actual computation forward pass
         #weights/bias class also store the information for the backwards pass.
-        weightOutput = self.weights.forwardPass(inputVector)
+        output = self.weights.forwardPass(inputVector)
         if(self.bias):
-            biasOutput = weightOutput + self.bias.bias
-        else:
-            biasOuput = weightOutput
+            output += self.bias.bias
         if(self.activationFunction):
-            return self.activationFunction.forwardPass(biasOutput)
+            return self.activationFunction.forwardPass(output)
         else:
-            return biasOutput
+            return output
 
     def backwardPass(self, priorGradient):
         """
@@ -192,7 +190,7 @@ class Bias:
         Args:
             x (int): size of biases
         """
-        self._bias = np.ones(x)
+        self._bias = np.zeros(x)
         #learning params
         self.vdb = np.zeros(x)
         self.sdb = np.zeros(x)
@@ -252,23 +250,20 @@ class Softmax:
         Args:
             input1 (numpy array): 1D numpy array. Output from last layer of network.
             label (int): int corresponding to label of current input
+        Returns:
+            1D numpy array of probability scores
         """
         self.input1 = input1     #saves input1 for use in calling scores
         self.labelIndex = label  #saves label input for backward pass
-        #prevents values from being too high to exponentiate (cannot be >744)
-        #Also tries not to shrink them so low they vanish to 0 and cannot be logged.
         maxVal = np.max(input1)
-        if(maxVal == 0):    #prevents divide by zero error
-            maxVal = 1/744
-        expNum = input1 / (maxVal * 744)
-        exp = np.exp(expNum) #exponentiates safe values
+        expNums = input1 - maxVal
+        expd = np.exp(expNums) #exponentiates safe values
         #sums all weights and creates 1/sum to multiply and find the probability scores
-        sumVal = np.sum(exp)
-        invSum = 1/sumVal
         #calculates probScores and saves for back pass (scores are 0-1 probability based on networks scores)
-        self._probScores = exp * invSum
+        self._probScores = expd /np.sum(expd)
         #computes loss (-log is 0 when score is 1, increases as score gets lower)
-        self._loss = -math.log(self._probScores[self.labelIndex]) 
+        self._loss = -math.log(np.maximum(self._probScores[self.labelIndex], 1e-9))
+        return self._probScores 
 
 
     def backwardPass(self):

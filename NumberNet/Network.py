@@ -28,13 +28,16 @@ class Network():
         self.batchAccuracyList = []
         self.accuracyList = []
        
-    def normalizeData(self, trainImages):
+    def setNormalizeData(self, trainImages):
         """
-        Sets means an variance to be used for normalizing data
+        Sets means and variance to be used for normalizing data
         Args:
             trainImages (numpy array): List of 1D numpy arrays used for training network.
         """
-        self.meanImg = np.mean(trainImages)
+        trainImages = np.array(trainImages)
+        self.meanImg = np.zeros(len(trainImages[0]))
+        for i in range(len(trainImages[0])):
+            self.meanImg[i] = np.mean(trainImages[:,i])
         self.variance = np.var(trainImages)
 
     def forwardPass(self, data, labelIndex):
@@ -49,7 +52,7 @@ class Network():
         currentVector = data
         for layer in self.layers:
             currentVector = layer.forwardPass(currentVector)
-        self.lossFunction.forwardPass(currentVector, labelIndex) #loss
+        currentVector = self.lossFunction.forwardPass(currentVector, labelIndex) #loss
         return currentVector #scores
 
 
@@ -160,7 +163,7 @@ class Network():
             batchSize (int): Size to be used for minibatches when training
             epochs (int): Number of epochs to run the network when training
         """
-        self.normalizeData(trainImages) #records mean and variance of train data
+        self.setNormalizeData(trainImages) #records mean and variance of train data
         startTime = time.perf_counter() #used to time training
         #Defines number of minibatches. If the minibatch isn't divisible by the
         #data size, it will round down and not run on all the train data.

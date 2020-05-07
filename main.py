@@ -10,13 +10,13 @@ def main():
     """
     layers = [NN.Layer(784,512,True, 'ReLU'), NN.Layer(512,10,True)]
     #layers is a list to be used in the network. Each element is a NN.Layer object
-    parameters = NN.Parameters(stepSize = 1e-4, regularization = 1e-5, decay = .9, RMSProp = False, momentum=True)
+    parameters = NN.Parameters(stepSize = 1e-3, regularization = 1e-5, decay = .9, RMSProp = False, momentum=False)
     #parameters is an object which defines the training parameters of the network.
     network = NN.Network(parameters, layers, NN.Layers.Softmax()) #initialize network with parameters, layers,
                                                                   #and softmax activation function
     trainImages, trainLabels, testImages, testLabels = importData()  #import MNIST data
     initialAccuracy = network.accuracyTest(testImages, testLabels)
-    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 512, epochs = 1) #train network
+    network.train(trainImages, trainLabels, testImages, testLabels, batchSize = 1024, epochs = 1) #train network
     finalAccuracy = network.accuracyTest(testImages, testLabels)
     print('initAccuracy: ', initialAccuracy) #display accuracy data
     print('finalAccuracy: ', finalAccuracy)
