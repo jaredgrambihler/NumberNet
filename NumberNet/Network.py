@@ -128,7 +128,8 @@ class Network():
         for i in range(numData):
             #Forwards a single image and label through the network inside the accuracy method.
             #Adds to accuracy after forwards pass is complete
-            accuracy += self.accuracy(miniBatchImages[i], miniBatchLabels[i])
+            adjImage = np.array(miniBatchImages[i]) - self.meanImg
+            accuracy += self.accuracy(adjImage, miniBatchLabels[i])
             loss += self.lossFunction.loss #updates loss
             self.backwardPass() #backprops and adds to weights and biases
         #update weights for minibatch gradients
